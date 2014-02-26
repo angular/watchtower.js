@@ -2,7 +2,7 @@
 
 module.exports = function(config) {
   config.set({
-    frameworks: ['jasmine', 'traceur', 'requirejs'],
+    frameworks: ['jasmine', 'requirejs', 'traceur'],
 
     traceurPreprocessor: {
       options: {

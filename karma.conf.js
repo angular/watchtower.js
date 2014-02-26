@@ -5,13 +5,17 @@ module.exports = function(config) {
 
   config.set({
     files: [
-      'src/**/*.js',
-      'test/**/*.js'
+      'test/test.js',
+
+      { pattern: 'src/**/*.js', included: false },
+      { pattern: 'test/**/matchers.js', included: false },
+      { pattern: 'test/**/*spec.js', included: false },
+      { pattern: 'node_modules/es6-shim/es6-shim.js', included: false }
     ],
 
     preprocessors: {
       'src/**/*.js': ['traceur'],
-      'test/**/*.js': ['traceur']
+      'test/**/*.spec.js': ['traceur']
     }
   });  
 }
