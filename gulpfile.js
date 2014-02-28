@@ -7,7 +7,7 @@ gulp.task('test', function(done) {
   };
   for (var i=0, ii = process.argv.length; i<ii; ++i) {
     var val = process.argv[i];
-    if (val === '--watch') options.watch = true;
+    if (val === '--watch') options.autoWatch = true;
     else if (val === '--single-run') options.singleRun = true;
     else if (val === '--browsers') options.browsers = process.argv[++i].split(',');
   }
