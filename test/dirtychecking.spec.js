@@ -12,7 +12,7 @@ describe('DirtyCheckingChangeDetector', function() {
       'age': function(o) { return o.age; }
     });
 
-    detector = new DirtyCheckingChangeDetector(getterCache);
+    detector = new DirtyCheckingChangeDetector(null, getterCache);
   });
 
   describe('object field', function() {
