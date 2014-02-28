@@ -354,67 +354,67 @@ describe('DirtyCheckingChangeDetector', function() {
         });
       });
     });
+  });
 
 
-    describe('map watching', function() {
-      it('should do basic map watching', function() {
-        var map = {};
-        var record = detector.watch(map, null, 'handler');
-        expect(detector.collectChanges()).toBe(null);
+  describe('map watching', function() {
+    it('should do basic map watching', function() {
+      var map = {};
+      var record = detector.watch(map, null, 'handler');
+      expect(detector.collectChanges()).toBe(null);
 
-        map['a'] = 'A';
-        expect(detector.collectChanges().currentValue).toEqualMapRecord({
-          map: ['a[null -> A]'],
-          additions: ['a[null -> A]']
-        });
-
-        map['b'] = 'B';
-        expect(detector.collectChanges().currentValue).toEqualMapRecord({
-          map: ['a', 'b[null -> B]'],
-          additions: ['b[null -> B]']
-        });
-
-        map['b'] = 'BB';
-        map['d'] = 'D';
-        expect(detector.collectChanges().currentValue).toEqualMapRecord({
-          map: ['a', 'b[B -> BB]', 'd[null -> D]'],
-          additions: ['d[null -> D]'],
-          changes: ['b[B -> BB]']
-        });
-
-        delete map['b'];
-        expect(detector.collectChanges().currentValue).toEqualMapRecord({
-          map: ['a', 'd'],
-          removals: ['b[BB -> null]']
-        });
-
-        delete map['a'];
-        delete map['d'];
-        expect(detector.collectChanges().currentValue).toEqualMapRecord({
-          map: ['a', 'd'],
-          removals: ['a[A -> null]', 'd[D -> null]']
-        });
+      map['a'] = 'A';
+      expect(detector.collectChanges().currentValue).toEqualMapRecord({
+        map: ['a[null -> A]'],
+        additions: ['a[null -> A]']
       });
 
-
-      it('should test string keys by value rather than by reference', function() {
-        var map = {'foo': 0};
-        detector.watch(map, null, null);
-        detector.collectChanges();
-
-        map['f' + 'oo'] = 0;
-        expect(detector.collectChanges()).toBe(null);        
+      map['b'] = 'B';
+      expect(detector.collectChanges().currentValue).toEqualMapRecord({
+        map: ['a', 'b[null -> B]'],
+        additions: ['b[null -> B]']
       });
 
-
-      /* TODO: name this consistently with other "ignore NaN != NaN" tests */
-      it('should not see a NaN value as a change', function() {
-        var map = {'foo': NaN};
-        detector.watch(map, null, null);
-        detector.collectChanges();
-
-        expect(detector.collectChanges()).toBe(null);
+      map['b'] = 'BB';
+      map['d'] = 'D';
+      expect(detector.collectChanges().currentValue).toEqualMapRecord({
+        map: ['a', 'b[B -> BB]', 'd[null -> D]'],
+        additions: ['d[null -> D]'],
+        changes: ['b[B -> BB]']
       });
+
+      delete map['b'];
+      expect(detector.collectChanges().currentValue).toEqualMapRecord({
+        map: ['a', 'd'],
+        removals: ['b[BB -> null]']
+      });
+
+      delete map['a'];
+      delete map['d'];
+      expect(detector.collectChanges().currentValue).toEqualMapRecord({
+        map: ['a', 'd'],
+        removals: ['a[A -> null]', 'd[D -> null]']
+      });
+    });
+
+
+    it('should test string keys by value rather than by reference', function() {
+      var map = {'foo': 0};
+      detector.watch(map, null, null);
+      detector.collectChanges();
+
+      map['f' + 'oo'] = 0;
+      expect(detector.collectChanges()).toBe(null);        
+    });
+
+
+    /* TODO: name this consistently with other "ignore NaN != NaN" tests */
+    it('should not see a NaN value as a change', function() {
+      var map = {'foo': NaN};
+      detector.watch(map, null, null);
+      detector.collectChanges();
+
+      expect(detector.collectChanges()).toBe(null);
     });
   });
 });
