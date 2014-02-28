@@ -39,7 +39,7 @@ describe('DirtyCheckingChangeDetector', function() {
       expect(change.currentValue).toBe('misko');
       expect(change.previousValue).toBe('');
       expect(change.nextChange.currentValue).toBe('hevery');
-      expect(change.nextChange.previousValue).toBe('hevery');
+      expect(change.nextChange.previousValue).toBe('');
       expect(change.nextChange.nextChange).toBe(null);
 
       // force different instance
