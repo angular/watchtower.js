@@ -70,8 +70,8 @@ var mapRemovalsKeys = {
 
 beforeEach(function() {
   this.addMatchers({
-    toEqualCollectionRecord: function() {
-      var expected = this.expected, actual = this.actual, diffs = [];
+    toEqualCollectionRecord: function(expected) {
+      var actual = this.actual, diffs = [];
       if (typeof expected.collection === 'undefined') expected.collection = [];
       if (typeof expected.additions === 'undefined') expected.additions = [];
       if (typeof expected.moves === 'undefined') expected.moves = [];
@@ -83,8 +83,8 @@ beforeEach(function() {
       return result;
     },
 
-    toEqualMapRecord: function() {
-      var expected = this.expected, actual = this.actual;
+    toEqualMapRecord: function(expected) {
+      var actual = this.actual, diffs = [];
       if (typeof expected.map === 'undefined') expected.map = [];
       if (typeof expected.additions === 'undefined') expected.additions = [];
       if (typeof expected.changes === 'undefined') expected.changes = [];
