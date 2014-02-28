@@ -21,7 +21,7 @@ describe('DirtyCheckingChangeDetector', function() {
       expect(changes).toBe(null);
     });
 
-    it('should direct field changes', function() {
+    it('should detect field changes', function() {
       var user = new _User('', '');
       var change;
 
