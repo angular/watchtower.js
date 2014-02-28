@@ -8,7 +8,7 @@ function checkLinkedListProperty(keys, expected, actual, diffs) {
     } else {
       if (listItem.toString() !== item) {
         equals = false;
-        diffs.push('collection mismatch: ${listItem} !== ${item}');
+        diffs.push('collection mismatch: expected ' + listItem + ' to equal ' + item);
       }
       listItem = listItem[keys['listNext']];
     }
@@ -80,6 +80,9 @@ beforeEach(function() {
                    checkLinkedListProperty(additionsKeys, expected, actual, diffs) &&
                    checkLinkedListProperty(movesKeys, expected, actual, diffs) &&
                    checkLinkedListProperty(removalsKeys, expected, actual, diffs);
+      this.message = function() {
+        return diffs.join("\n");
+      };
       return result;
     },
 
@@ -93,6 +96,9 @@ beforeEach(function() {
                    checkLinkedListProperty(mapAdditionsKeys, expected, actual, diffs) &&
                    checkLinkedListProperty(changesKeys, expected, actual, diffs) &&
                    checkLinkedListProperty(mapRemovalsKeys, expected, actual, diffs);
+      this.message = function() {
+        return diffs.join("\n");
+      };
       return result;
     }
   });  
