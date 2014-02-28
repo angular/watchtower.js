@@ -1182,10 +1182,11 @@ class _DuplicateItemRecordList {
       //assert(beforeRecord == null);
       this.head = this.tail = record;
     } else {
+      // TODO: Traceur assertions
       //assert(record.item === head.item);
       if (beforeRecord == null) {
         this.tail._nextDupRec = record;
-        this.record._prevDupRec = tail;
+        record._prevDupRec = this.tail;
         this.tail = record;
       } else {
         var prev = beforeRecord._prevDupRec;
@@ -1279,10 +1280,13 @@ class DuplicateMap {
     // There's no good way to clear the map, judging from
     // http://wiki.ecmascript.org/doku.php?id=harmony:simple_maps_and_sets (maybe out of date) but
     // I can iterate over keys and remove them all.
-    for (var key in this._map) {
+    //for (var key in this._map) {
       // TODO: measure this
-      // This feels possibly leaky...
-      this._map.delete(key);
-    }
+      // This feels possibly leaky... And probably wrong...
+    //  this._map.delete(key);
+    //}
+    
+    // TODO: Figure out a better way to clear the Map, as without this, the removals map is broken.
+    this._map = new Map();
   }
 }
