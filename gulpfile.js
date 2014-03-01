@@ -1,5 +1,33 @@
 var gulp = require('gulp'),
-    karma = require('./lib/gulp/karma');
+    karma = require('./lib/gulp/karma'),
+    traceur = require('gulp-traceur'),
+    path = require('path');
+
+gulp.task('build:amd', function() {
+  gulp.src('src/*.js')
+  .pipe(traceur({
+    modules: 'amd',
+    types: true,
+    annotations: true,
+    sourceMap: true
+  }))
+  .pipe(gulp.dest(path.resolve(__dirname,'build/amd')));
+});
+
+gulp.task('build:cjs', function() {
+  gulp.src('src/*.js')
+  .pipe(traceur({
+    modules: 'commonjs',
+    types: true,
+    annotations: true,
+    sourceMap: true
+  }))
+  .pipe(gulp.dest(path.resolve(__dirname,'build/commonjs')));
+});
+
+gulp.task('build', ['build:amd', 'build:cjs'], function() {
+  
+});
 
 gulp.task('test', function(done) {
   var options = {
