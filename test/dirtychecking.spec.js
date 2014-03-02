@@ -113,7 +113,8 @@ describe('DirtyCheckingChangeDetector', function() {
     });
 
 
-    it('should remove all watches in group and group\'s children', function() {
+    // TODO: tests involving watch groups are disabled until WatchGroup is implemented.
+    xit('should remove all watches in group and group\'s children', function() {
       var obj = {};
       var ra = detector.watch(obj, 'a', '0a');
       var child1a = detector.newGroup();
@@ -134,7 +135,7 @@ describe('DirtyCheckingChangeDetector', function() {
     });
 
 
-    it('should add watches within its own group', function() {
+    xit('should add watches within its own group', function() {
       var obj = {};
       var ra = detector.watch(obj, 'a', 'a');
       var child = detector.newGroup();
@@ -159,7 +160,7 @@ describe('DirtyCheckingChangeDetector', function() {
     });
 
 
-    it('should properly add children', function() {
+    xit('should properly add children', function() {
       var a = detector.newGroup();
       var aChild = a.newGroup();
       var b = detector.newGroup();
