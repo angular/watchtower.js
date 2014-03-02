@@ -232,7 +232,7 @@ export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGrou
           if (changeHead !== null) {
             changeTail = changeTail._nextChange = current;
           } else {
-            changeHead = changeTail = current;            
+            changeHead = changeTail = current;
           }
         }
         ++count;
@@ -829,7 +829,7 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
       record.previousIndex = record.currentIndex;
       var nextRecord = record._nextMovedRec;
       record._nextMovedRec = null;
-      
+
       // wat.
       // assert((record._nextMovedRec = null) == null);
       record = nextRecord;

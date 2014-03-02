@@ -164,7 +164,7 @@ describe('DirtyCheckingChangeDetector', function() {
       var aChild = a.newGroup();
       var b = detector.newGroup();
       expect(detector.collectChanges).not.toThrow();
-    });    
+    });
   });
 
 
@@ -411,7 +411,7 @@ describe('DirtyCheckingChangeDetector', function() {
       detector.collectChanges();
 
       map['f' + 'oo'] = 0;
-      expect(detector.collectChanges()).toBe(null);        
+      expect(detector.collectChanges()).toBe(null);
     });
 
 

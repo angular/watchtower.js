@@ -101,5 +101,5 @@ beforeEach(function() {
       };
       return result;
     }
-  });  
+  });
 });
