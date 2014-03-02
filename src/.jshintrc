@@ -1,0 +1,18 @@
+{
+	"esnext": true,
+	"bitwise": true,
+	"immed": true,
+	"newcap": true,
+	"noarg": true,
+	"noempty": true,
+	"nonew": true,
+	"trailing": true,
+	"maxlen": 100,
+	"boss": true,
+	"expr": true,
+	"sub": true,
+	"undef": true,
+	"browser": true,
+	"newcap": false,
+	"laxbreak": true
+}

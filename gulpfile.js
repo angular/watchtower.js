@@ -1,7 +1,15 @@
 var gulp = require('gulp'),
     karma = require('./lib/gulp/karma'),
     traceur = require('gulp-traceur'),
+    jshint = require('gulp-jshint'),
     path = require('path');
+
+gulp.task('lint', function() {
+  gulp.src('src/*.js')
+  .pipe(jshint())
+  .pipe(jshint.reporter('jshint-stylish'))
+  .pipe(jshint.reporter('fail'));
+});
 
 gulp.task('build:amd', function() {
   gulp.src('src/*.js')
@@ -25,7 +33,7 @@ gulp.task('build:cjs', function() {
   .pipe(gulp.dest(path.resolve(__dirname,'build/commonjs')));
 });
 
-gulp.task('build', ['build:amd', 'build:cjs'], function() {
+gulp.task('build', ['lint', 'build:amd', 'build:cjs'], function() {
   
 });
 

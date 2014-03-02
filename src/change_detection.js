@@ -45,6 +45,7 @@ export class ChangeRecord extends Record {
 // where a ChangeRecord isn't --- But we don't have strong typing in JS, so we
 // can probably make this work regardless
 export class WatchRecord extends ChangeRecord {
+  get object() { throw "get object() not implemented"; }
   set object(value) { throw "set object() not implemented"; }
 
   check() { throw "check() not implemented"; }

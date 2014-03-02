@@ -7,7 +7,6 @@ import {
   CollectionChangeRecord,
   CollectionChangeItem
 } from './change_detection.js';
-
 /**
  * these cannot currently be defined in the DirtyCheckingRecord class itself,
  * unfortunately. They've been moved outside and de-const-ified for this
@@ -23,7 +22,6 @@ var _MODE_GETTER_ = 3;
 var _MODE_MAP_FIELD_ = 4;
 var _MODE_ITERABLE_ = 5;
 var _MODE_MAP_ = 6;
-
 export class GetterCache {
   constructor(map) {
     this._map = map;
@@ -32,13 +30,11 @@ export class GetterCache {
     return this._map[field] || null;
   }
 }
-
 export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
   constructor(parent, cache) {
     this._parent = parent;
     this._getterCache = cache;
     this._marker = DirtyCheckingRecord.marker();
-
     if (parent === null) {
       this._recordHead = this._recordTail = this._marker;
     } else {
@@ -46,66 +42,54 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
       this._recordHead = this._recordTail = this._recordAdd(this._marker);
     }
   }
-
   watch(context, field, handler) {
     // assert(_root != null); // prove that we are not deleted connected;
     var getter = field === null ? null : this._getterCache.get(field);
     return this._recordAdd(new DirtyCheckingRecord(this, context, field, getter, handler));
   }
-
   remove() {
     var root;
-    assert((root = _root) != null);
-    assert(root._assertRecordsOk());
-    var prevRecord = _recordHead._prevRecord;
-    var nextRecord = _childInclRecordTail._nextRecord;
-
+    // TODO: Traceur assertions
+    // assert((root = _root) != null);
+    // assert(root._assertRecordsOk());
+    var prevRecord = this._recordHead._prevRecord;
+    var nextRecord = this._childInclRecordTail._nextRecord;
     if (prevRecord !== null) prevRecord._nextRecord = nextRecord;
     if (nextRecord !== null) nextRecord._prevRecord = prevRecord;
-
-    var cursor = _recordHead;
+    var cursor = this._recordHead;
     while(cursor != nextRecord) {
       cursor = cursor._nextRecord;
     }
-
-    var prevGroup = _prev;
-    var nextGroup = _next;
-
+    var prevGroup = this._prev;
+    var nextGroup = this._next;
     if (prevGroup === null) {
-      _parent._childHead = nextGroup;
+      this._parent._childHead = nextGroup;
     } else {
       prevGroup._next = nextGroup;
     }
     if (nextGroup === null) {
-      _parent._childTail = prevGroup;
+      this._parent._childTail = prevGroup;
     } else {
       nextGroup._prev = prevGroup;
     }
-    _parent = null;
-    assert(root._assertRecordsOk());
+    this._parent = null;
+    // TODO: Traceur assertions
+    // assert(root._assertRecordsOk());
   }
-
   _recordAdd(record) {
     var previous = this._recordTail,
         next = previous === null ? null : previous._nextRecord;
-
     record._nextRecord = next;
     record._prevRecord = previous;
-
     if (previous !== null) previous._nextRecord = record;
     if (next !== null) next._prevRecord = record;
-
     this._recordTail = record;
-
     if (previous === this._marker) this._recordRemove(this._marker);
-
     return record;
   }
-
   _recordRemove(record) {
     var previous = record._prevRecord,
         next = record._nextRecord;
-
     if (record === this._recordHead && record === this._recordTail) {
       // we are the last one, must leave marker behind.
       this._recordHead = this._recordTail = this._marker;
@@ -120,9 +104,9 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
       if (next !== null) next._prevRecord = previous;
     }
   }
-
   newGroup() {
-    assert(_root._assertRecordsOk());
+    // TODO: Traceur assertions
+    // assert(_root._assertRecordsOk());
     var child = new DirtyCheckingChangeDetectorGroup(this, this._getterCache);
     if (this._childHead === null) {
       this._childHead = this._childTail = child;
@@ -130,10 +114,10 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
       child._prev = this._childTail;
       this._childTail._next = this._childTail = child;
     }
-    assert(_root._assertRecordsOk());
+    // TODO: Traceur assertions
+    // assert(_root._assertRecordsOk());
     return child;
   }
-
   get _root() {
     var root = this, next;
     while ((next = root._parent) !== null) {
@@ -141,7 +125,6 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
     }
     return (root instanceof DirtyCheckingChangeDetector) ? root : null;
   }
-
   get _childInclRecordTail() {
     var tail = this, nextTail;
     while ((nextTail = tail._childTail) !== null) {
@@ -149,9 +132,10 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
     }
     return tail._recordTail;
   }
-
   get count() {
-    var count = 0, cursor = _recordHead, end = _childInclRecordTail;
+    var count = 0,
+        cursor = this._recordHead,
+        end = this._childInclRecordTail;
     while (cursor !== null) {
       if (cursor._mode !== DirtyCheckingRecord._MODE_MARKER_) {
         ++count;
@@ -161,12 +145,15 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
     }
     return count;
   }
-
   toString() {
-    var lines = [];
-    if (_parent === null) {
+    var lines = [],
+        record,
+        records,
+        recordTail,
+        childGroup;
+    if (this._parent === null) {
       var allRecords = [];
-      var record = this._recordHead;
+      record = this._recordHead;
       var includeChildrenTail = this._childInclRecordTail;
       do {
         allRecords.push(record.toString());
@@ -174,18 +161,16 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
       } while (record !== includeChildrenTail);
       lines.push("FIELDS: " + allRecords.join(', '));
     }
-
-    var records = [];
-    var record = _recordHead;
-    var recordTail = _recordTail;
+    records = [];
+    record = this._recordHead;
+    recordTail = this._recordTail;
     while (record !== recordTail) {
       records.push(record.toString());
       record = record._nextRecord;
     }
     records.add(record.toString());
-
     lines.add("DirtyCheckingChangeDetectorGroup(fields: " + records.join(', ') + ")");
-    var childGroup = _childHead;
+    childGroup = this._childHead;
     while (childGroup != null) {
       lines.push('  ' + childGroup.toString().split('\n').join('\n  '));
       childGroup = childGroup._next;
@@ -193,7 +178,6 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
     return lines.join('\n');
   }
 }
-
 export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGroup {
   _assertRecordsOk() {
     var record = this._recordHead,
@@ -217,15 +201,12 @@ export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGrou
     }
     return true;
   }
-
   collectChanges(exceptionHandler, stopwatch) {
     if (stopwatch) stopwatch.start();
-
     var changeHead = null,
         changeTail = null,
         current = this._recordHead,
         count = 0;
-
     while (current !== null) {
       try {
         if (current.check() !== null) {
@@ -252,18 +233,14 @@ export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGrou
     }
     return changeHead;
   }
-
   remove() {
     throw "Root ChangeDetector can not be removed";
   }
-
   get _root() {
     return this;
   }
-
   newGroup() {}
 }
-
 class DirtyCheckingRecord extends ChangeRecord {
   constructor(group, object, fieldName, getter, handler) {
     this._group = group;
@@ -273,43 +250,34 @@ class DirtyCheckingRecord extends ChangeRecord {
     // Do we really need reflection here?
     // this._symbol = fieldName === null ? null : new Symbol(fieldName);
     this.object = object;
-
     this._nextRecord = this._prevRecord = this._nextChange = null;
   }
-
   static marker() {
-    var marker = new DirtyCheckingRecord(null, null, null, null, null);
-    marker._mode = _MODE_MARKER_;
-    return marker;
+    var record = new DirtyCheckingRecord(null, null, null, null, null);
+    record._mode = _MODE_MARKER_;
+    return record;
   }
-
   get nextChange() {
     return this._nextChange;
   }
-
   get field() {
     return this._field;
   }
-
   get handler() {
     return this._handler;
   }
-
   set handler(handler) {
     this._handler = handler;
   }
-
   get object() {
     return this._object;
   }
-
   set object(obj) {
     this._object = obj;
     if (obj === null) {
       this._mode = _MODE_IDENTITY_;
       return;
     }
-
     if (this.field === null) {
       // _instanceMirror = null; --- Again, do we need reflection?
       if (typeof obj === "object") {
@@ -329,11 +297,10 @@ class DirtyCheckingRecord extends ChangeRecord {
       }
       return;
     }
-
     if (typeof obj === "object") {
       this._mode = _MODE_MAP_FIELD_;
       // _instanceMirror = null; --- Reflection needed?
-    } else if (_getter !== null) {
+    } else if (this._getter !== null) {
       this._mode = _MODE_GETTER_;
       // _instanceMirror = null; --- Reflection needed?
     } else {
@@ -341,7 +308,6 @@ class DirtyCheckingRecord extends ChangeRecord {
       // _instanceMirror = reflect(obj); --- I'm really not sure about this!
     }
   }
-
   check() {
     // assert(_mode != null); --- Traceur v0.0.24 missing assert()
     var current;
@@ -355,7 +321,7 @@ class DirtyCheckingRecord extends ChangeRecord {
         current = this.object[this.field];
         break;
       case _MODE_GETTER_:
-        current = this._getter(object);
+        current = this._getter(this.object);
         break;
       case _MODE_MAP_FIELD_:
         current = this.object[this.field];
@@ -370,7 +336,6 @@ class DirtyCheckingRecord extends ChangeRecord {
         throw "UNREACHABLE";
         // assert(false); --- Traceur 0.0.24 missing assert()
     }
-
     var last = this.currentValue;
     if (last !== current) {
       // TODO:
@@ -382,10 +347,9 @@ class DirtyCheckingRecord extends ChangeRecord {
       // is the same. We save the value so that next time identity will pass
       //currentValue = current;
       //} else
-      if ((typeof last === "number" && last !== last) &&
-          (typeof current === "number" && current !== current)) {
+      if (!((typeof last === "number" && last !== last) &&
+          (typeof current === "number" && current !== current))) {
         // Ignore NaN -> NaN changes
-      } else {
         this.previousValue = last;
         this.currentValue = current;
         return this;
@@ -393,18 +357,15 @@ class DirtyCheckingRecord extends ChangeRecord {
     }
     return null;
   }
-
-
   remove() {
     this._group._recordRemove(this);
   }
-
   toString() {
     // Where the heck is hashCode from?
+    var hashCode = 0;
     return _MODE_NAMES[this._mode] + '[' + this.field + ']{' + hashCode + '}';
   }
 }
-
 class _MapChangeRecord extends MapChangeRecord {
   constructor() {
     this._records = {}; // WeakMap perhaps?
@@ -414,33 +375,26 @@ class _MapChangeRecord extends MapChangeRecord {
     this._additionsHead = this._additionsTail = null;
     this._removalsHead = this._removalsTail = null;
   }
-
   get map() {
     return this._map;
   }
-
   get mapHead() {
     return this._mapHead;
   }
-
   get changesHead() {
     return this._changesHead;
   }
-
   get additionsHead() {
     return this._additionsHead;
   }
-
   get removalsHead() {
     return this._removalsHead;
   }
-
   get isDirty() {
     return this._additionsHead !== null ||
            this._changesHead !== null ||
            this._removalsHead !== null;
   }
-
   forEachChange(fn) {
     // TODO: assert(typeof fn === "function" && fn.length === 1)
     var record = this._changesHead;
@@ -449,7 +403,6 @@ class _MapChangeRecord extends MapChangeRecord {
       record = record._nextChangedKeyValue;
     }
   }
-
   forEachAddition(fn) {
     // TODO: assert(typeof fn === "function" && fn.length === 1)
     var record = this._additionsHead;
@@ -458,7 +411,6 @@ class _MapChangeRecord extends MapChangeRecord {
       record = record._nextAddedKeyValue;
     }
   }
-
   forEachRemoval(fn) {
     // TODO: assert(typeof fn === "function" && fn.length === 1)
     var record = this._removalsHead;
@@ -467,7 +419,6 @@ class _MapChangeRecord extends MapChangeRecord {
       record = record._nextRemovedKeyValue;
     }
   }
-
   _check(map) {
     this._reset();
     this._map = map;
@@ -475,10 +426,8 @@ class _MapChangeRecord extends MapChangeRecord {
     var oldSeqRecord = this._mapHead;
     var lastOldSeqRecord = null, lastNewSeqRecord = null;
     var seqChanged = false;
-
     // TODO: Use getOwnPropertyNames instead?
     var keys = Object.keys(map);
-
     for (var i = 0, ii = keys.length; i < ii; ++i) {
       var key = keys[i], value = map[key], newSeqRecord = null;
       if (oldSeqRecord !== null && key === oldSeqRecord.key) {
@@ -506,7 +455,6 @@ class _MapChangeRecord extends MapChangeRecord {
           this._addToAdditions(newSeqRecord);
         }
       }
-
       if (seqChanged) {
         if (this._isInRemovals(newSeqRecord)) {
           this._removeFromRemovals(newSeqRecord);
@@ -517,7 +465,6 @@ class _MapChangeRecord extends MapChangeRecord {
           lastNewSeqRecord._nextKeyValue = newSeqRecord;
         }
       }
-
       lastOldSeqRecord = oldSeqRecord;
       lastNewSeqRecord = newSeqRecord;
       oldSeqRecord = oldSeqRecord === null ? null : oldSeqRecord._nextKeyValue;
@@ -525,36 +472,32 @@ class _MapChangeRecord extends MapChangeRecord {
     this._truncate(lastOldSeqRecord, oldSeqRecord);
     return this.isDirty;
   }
-
   _reset() {
-    var record = this._changesHead;
+    var record = this._changesHead,
+        nextRecord;
     while (record !== null) {
-      var nextRecord = record._nextChangedKeyValue;
+      nextRecord = record._nextChangedKeyValue;
       record._previousValue = record._currentValue;
       record._nextChangedKeyValue = null;
       record = nextRecord;
     }
-
     record = this._additionsHead;
     while (record !== null) {
-      var nextRecord = record._nextAddedKeyValue;
+      nextRecord = record._nextAddedKeyValue;
       record._previousValue = record._currentValue;
       record._nextAddedKeyValue = null;
       record = nextRecord;
     }
-
     record = this._removalsHead;
     while (record !== null) {
-      var nextRecord = record._nextRemovedKeyValue;
+      nextRecord = record._nextRemovedKeyValue;
       record._nextRemovedKeyValue = null;
       record = nextRecord;
     }
-
     this._changesHead = this._changesTail = null;
     this._additionsHead = this._additionsTail = null;
     this._removalsHead = this._removalsTail = null;
   }
-
   _truncate(lastRecord, record) {
     while (record !== null) {
       if (lastRecord === null) {
@@ -568,7 +511,6 @@ class _MapChangeRecord extends MapChangeRecord {
       lastRecord = record;
       record = nextRecord;
     }
-
     record = this._removalsHead;
     while (record !== null) {
       record._previousValue = record._currentValue;
@@ -577,13 +519,11 @@ class _MapChangeRecord extends MapChangeRecord {
       record = record._nextRemovedKeyValue;
     }
   }
-
   _isInRemovals(record) {
     return record === this._removalsHead ||
            record._nextRemovedKeyValue !== null ||
            record._prevRemovedKeyValue !== null;
   }
-
   _addToRemovals(record) {
     // TODO: traceur assertions
     // assert(record._nextKeyValue === null);
@@ -599,7 +539,6 @@ class _MapChangeRecord extends MapChangeRecord {
       this._removalsTail = record;
     }
   }
-
   _removeFromSeq(prev, record) {
     var next = record._nextKeyValue;
     if (prev === null) {
@@ -607,16 +546,13 @@ class _MapChangeRecord extends MapChangeRecord {
     } else {
       prev._nextKeyValue = next;
     }
-
     record._nextKeyValue = null;
   }
-
   _removeFromRemovals(record) {
     // TODO: traceur assertions
     // assert(record._nextKeyValue === null)
     // assert(record._nextAddedKeyValue === null)
     // assert(record._nextChangedKeyValue === null)
-
     var prev = record._prevRemovedKeyValue,
         next = record._nextRemovedKeyValue;
     if (prev === null) {
@@ -631,7 +567,6 @@ class _MapChangeRecord extends MapChangeRecord {
     }
     record._prevRemovedKeyValue = record._nextRemovedKeyValue = null;
   }
-
   _addToAdditions(record) {
     // TODO: traceur assertions
     // assert(record._nextKeyValue === null)
@@ -646,7 +581,6 @@ class _MapChangeRecord extends MapChangeRecord {
       this._additionsTail = record;
     }
   }
-
   _addToChanges(record) {
     // TODO: traceur assertions
     // assert(record._nextAddedKeyValue === null)
@@ -661,7 +595,6 @@ class _MapChangeRecord extends MapChangeRecord {
     }
   }
 }
-
 class KeyValueRecord extends MapKeyValue {
   constructor(key) {
     this._key = key;
@@ -669,66 +602,52 @@ class KeyValueRecord extends MapKeyValue {
     this._nextKeyValue = this._nextAddedKeyValue = this._nextChangedKeyValue = null;
     this._nextRemovedKeyValue = this._prevRemovedKeyValue = null;
   }
-
   get previousValue() {
     return this._previousValue;
   }
-
   get currentValue() {
     return this._currentValue;
   }
-
   get nextKeyValue() {
     return this._nextKeyValue;
   }
-
   get nextAddedKeyValue() {
     return this._nextAddedKeyValue;
   }
-
   get nextRemovedKeyValue() {
     return this._nextRemovedKeyValue;
   }
-
   get nextChangedKeyValue() {
     return this._nextChangedKeyValue;
   }
-
   toString() {
     return this._previousValue === this._currentValue
           ? this._key
           : this._key + '[' + this._previousValue + ' -> ' + this._currentValue + ']';
   }
 }
-
 class _CollectionChangeRecord extends CollectionChangeRecord {
   constructor() {
     this._iterable = null;
     this._items = new DuplicateMap();
     this._removedItems = new DuplicateMap();
-
     this._collectionHead = this._collectionTail = null;
     this._additionsHead = this._additionsTail = null;
     this._movesHead = this._movesTail = null;
     this._removalsHead = this._removalsTail = null;
   }
-
   get collectionHead() {
     return this._collectionHead;
   }
-
   get additionsHead() {
     return this._additionsHead;
   }
-
   get movesHead() {
     return this._movesHead;
   }
-
   get removalsHead() {
     return this._removalsHead;
   }
-
   forEachAddition(fn){
     // TODO: assert(typeof fn === "function" && fn.length === 1)
     var record = this._additionsHead;
@@ -737,7 +656,6 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
       record = record._nextAddedRec;
     }
   }
-
   forEachMove(fn) {
     // TODO: assert(typeof fn === "function" && fn.length === 1)
     var record = this._movesHead;
@@ -746,7 +664,6 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
       record = record._nextMovedRec;
     }
   }
-
   forEachRemoval(fn){
     // TODO: assert(typeof fn === "function" && fn.length === 1)
     var record = this._removalsHead;
@@ -755,22 +672,21 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
       record = record._nextRemovedRec;
     }
   }
-
   get iterable() {
-    return _iterable;
+    return this._iterable;
   }
-
   _check(collection) {
     this._reset();
-    var record = this._collectionHead;
-    var maybeDirty = false;
-
+    var record = this._collectionHead,
+        maybeDirty = false,
+        index,
+        end,
+        item;
     // TODO: Optimization for frozen arrays / sets / iteratables
     // if ((collection is UnmodifiableListView) && identical(_iterable, collection)) {
       // Short circuit and assume that the list has not been modified.
     //  return false;
     // }
-
     if (Array.isArray(collection)) {
       // TODO:
       // Is a separate branch for Array really needed, if the object is known to be
@@ -778,8 +694,8 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
       // executed, so this shouldn't hurt. But it also causes problems for other
       // ES6 iterable types (using generators or custom iterators)
       var list = collection;
-      for (var index = 0, end = list.length; index < end; index++) {
-        var item = list[index];
+      for (index = 0, end = list.length; index < end; index++) {
+        item = list[index];
         if (record == null || item !== record.item) {
           record = this.mismatch(record, item, index);
           maybeDirty = true;
@@ -790,8 +706,8 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
         record = record._nextRec;
       }
     } else {
-      var index = 0;
-      for (var item in collection) {
+      index = 0;
+      for (item in collection) {
         if (record == null || item !== record.item) {
           record = this.mismatch(record, item, index);
           maybeDirty = true;
@@ -803,12 +719,10 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
         index++;
       }
     }
-
     this._truncate(record);
     this._iterable = collection;
     return this.isDirty;
   }
-
   /**
    * Reset the state of the change objects to show no changes. This means set
    * previousKey to currentKey, and clear all of the queues (additions, moves,
@@ -816,31 +730,26 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
    */
   _reset() {
     var record;
-
     record = this._additionsHead;
     while(record !== null) {
       record.previousIndex = record.currentIndex;
       record = record._nextAddedRec;
     }
     this._additionsHead = this._additionsTail = null;
-
     record = this._movesHead;
     while(record !== null) {
       record.previousIndex = record.currentIndex;
       var nextRecord = record._nextMovedRec;
       record._nextMovedRec = null;
-
       // wat.
       // assert((record._nextMovedRec = null) == null);
       record = nextRecord;
     }
-
     this._movesHead = this._movesTail = null;
     this._removalsHead = this._removalsTail = null;
     // TODO: Traceur assertions
     // assert(isDirty == false);
   }
-
   /**
    * A [_CollectionChangeRecord] is considered dirty if it has additions, moves
    * or removals.
@@ -850,7 +759,6 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
            this._movesHead !== null ||
            this._removalsHead !== null;
   }
-
   /**
    * This is the core function which handles differences between collections.
    *
@@ -871,17 +779,14 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
         record.item = item;
         return record;
       }
-
       if ((typeof item === "number" && item !== item) &&
           (typeof record.item === "number" && record.item !== record.item)) {
         // we need this for JavaScript since in JS NaN !== NaN.
         return record;
       }
     }
-
     // find the previous record so that we know where to insert after.
     var prev = record === null ? this._collectionTail : record._prevRec;
-
     // Remove the record from the collection since we know it does not match the
     // item.
     if (record !== null) this._collection_remove(record);
@@ -904,7 +809,6 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     }
     return record;
   }
-
   /**
    * This check is only needed if an array contains duplicates. (Short circuit
    * of nothing dirty)
@@ -941,7 +845,6 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     }
     return record;
   }
-
   /**
    * Get rid of any excess [ItemRecord]s from the previous collection
    *
@@ -956,17 +859,14 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     }
     this._removedItems.clear();
   }
-
   _collection_reinsertAfter(record, insertPrev, index) {
     this._removedItems.remove(record);
     var prev = record._prevRemovedRec;
     var next = record._nextRemovedRec;
-
     // TODO: Traceur assertions... also wat.
     record._prevRemovedRec = record._nextRemovedRec = null;
     //assert((record._prevRemovedRec = null) == null);
     //assert((record._nextRemovedRec = null) == null);
-
     if (prev === null) {
       this._removalsHead = next;
     } else {
@@ -977,22 +877,18 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     } else {
       next._prevRemovedRec = prev;
     }
-
     this._collection_insertAfter(record, insertPrev, index);
     this._moves_add(record);
     return record;
   }
-
   _collection_moveAfter(record, prev, index) {
     this._collection_unlink(record);
     this._collection_insertAfter(record, prev, index);
     this._moves_add(record);
     return record;
   }
-
   _collection_addAfter(record, prev, index) {
     this._collection_insertAfter(record, prev, index);
-
     if (this._additionsTail === null) {
       // TODO: Traceur assertions
       //assert(_additionsHead == null);
@@ -1005,13 +901,11 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     }
     return record;
   }
-
   _collection_insertAfter(record, prev, index) {
     // TODO: Traceur assertions
     // assert(record != prev);
     // assert(record._nextRec == null);
     // assert(record._prevRec == null);
-
     var next = prev === null ? this._collectionHead : prev._nextRec;
     // TODO: Traceur assertions
     //assert(next != record);
@@ -1028,27 +922,21 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     } else {
       prev._nextRec = record;
     }
-
     this._items.put(record);
     record.currentIndex = index;
     return record;
   }
-
   _collection_remove(record) {
     this._removals_add(this._collection_unlink(record));
   }
-
   _collection_unlink(record) {
     this._items.remove(record);
-
     var prev = record._prevRec;
     var next = record._nextRec;
-
     // TODO: Traceur assertions. wat.
     record._prevRec = record._nextRec = null;
     //assert((record._prevRec = null) == null);
     //assert((record._nextRec = null) == null);
-
     if (prev === null) {
       this._collectionHead = next;
     } else {
@@ -1059,10 +947,8 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     } else {
       next._prevRec = prev;
     }
-
     return record;
   }
-
   _moves_add(record) {
     // TODO: Traceur assertions
     //assert(record._nextMovedRec == null);
@@ -1075,14 +961,11 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
       // assert(_movesTail._nextMovedRec == null);
       this._movesTail = this._movesTail._nextMovedRec = record;
     }
-
     return record;
   }
-
   _removals_add(record) {
     record.currentIndex = null;
     this._removedItems.put(record);
-
     if (this._removalsTail === null) {
       // TODO: Traceur assertions
       // assert(_removalsHead === null);
@@ -1096,45 +979,38 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     }
     return record;
   }
-
   toString() {
     var record;
-
     var list = [];
     record = this._collectionHead;
     while(record !== null) {
       list.push(record);
       record = record._nextRec;
     }
-
     var additions = [];
     record = this._additionsHead;
     while(record !== null) {
       additions.push(record);
       record = record._nextAddedRec;
     }
-
     var moves = [];
     record = this._movesHead;
     while(record !== null) {
       moves.push(record);
       record = record._nextMovedRec;
     }
-
     var removals = [];
     record = this._removalsHead;
     while(record !== null) {
       removals.push(record);
       record = record._nextRemovedRec;
     }
-
     return "collection: " + list.join(', ') + "\n" +
            "additions: " + additions.join(', ') + "\n" +
            "moves: " + moves.join(', ') + "\n" +
            "removals: " + removals.join(', ') + "\n";
   }
 }
-
 class ItemRecord extends CollectionChangeItem {
   constructor(item) {
     this.item = item;
@@ -1144,35 +1020,28 @@ class ItemRecord extends CollectionChangeItem {
     this._prevRemovedRec = this._nextRemovedRec = null;
     this._nextAddedRec = this._nextMovedRec = null;
   }
-
   get nextCollectionItem() {
     return this._nextRec;
   }
-
   get nextRemovedItem() {
     return this._nextRemovedRec;
   }
-
   get nextAddedItem() {
     return this._nextAddedRec;
   }
-
   get nextMovedItem() {
     return this._nextMovedRec;
   }
-
   toString() {
     return this.previousIndex === this.currentIndex
       ? '' + this.item
       : this.item + '[' + this.previousIndex + ' -> ' + this.currentIndex + ']';
   }
 }
-
 class _DuplicateItemRecordList {
   constructor() {
     this.head = this.tail = null;
   }
-
   add(record, beforeRecord) {
     // TODO: Traceur assertions
     // assert(record._prevDupRec == null);
@@ -1194,7 +1063,7 @@ class _DuplicateItemRecordList {
         record._prevDupRec = prev;
         record._nextDupRec = next;
         if (prev === null) {
-          head = record;
+          this.head = record;
         } else {
           prev._nextDupRec = record;
         }
@@ -1202,7 +1071,6 @@ class _DuplicateItemRecordList {
       }
     }
   }
-
   get(key, hideIndex) {
     var record = this.head;
     while(record !== null) {
@@ -1214,7 +1082,6 @@ class _DuplicateItemRecordList {
     }
     return record;
   }
-
   remove(record) {
     // TODO: Add assertion to ensure that the record is within the list.
     // Since this is a private API, this may not be necessary, but it should assist in ensuring
@@ -1231,17 +1098,14 @@ class _DuplicateItemRecordList {
     } else {
       next._prevDupRec = prev;
     }
-
     // TODO: Traceur assertions
     // These assertions look incorrect to me, if Dart/ECMAScript operator precedence is anything
     // like C/C++ (which, to my knowledge, it is)
     // assert((record._prevDupRec = null) == null);
     // assert((record._nextDupRec = null) == null);
-
     return this.head == null;
   }
 }
-
 class DuplicateMap {
   constructor() {
     // For an identical behaviour to the Dart implementation, a Map or WeakMap is required. However,
@@ -1251,7 +1115,6 @@ class DuplicateMap {
     // occur here.
     this._map = new Map();
   }
-
   put(record, beforeRecord) {
     if (arguments.length === 1) beforeRecord = null;
     // TODO: traceur assert
@@ -1262,12 +1125,10 @@ class DuplicateMap {
       this._map.set(record.item, list = new _DuplicateItemRecordList());
     list.add(record, beforeRecord);
   }
-
   get(key, hideIndex) {
     var list = this._map.get(key);
     return list == null ? null : list.get(key, hideIndex);
   }
-
   remove(record) {
     var list = this._map.get(record.item);
     // TODO: traceur assert()
@@ -1275,7 +1136,6 @@ class DuplicateMap {
     if (list.remove(record)) this._map.delete(record.item);
     return record;
   }
-
   clear() {
     this._map.clear();
   }
