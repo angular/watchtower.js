@@ -11,6 +11,7 @@ env:
 
 before_script:
   - mkdir -p $LOGS_DIR
+  - npm install karma-sauce-launcher
 
 script:
   - ./lib/travis/build.sh
