@@ -171,7 +171,7 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
     records.add(record.toString());
     lines.add("DirtyCheckingChangeDetectorGroup(fields: " + records.join(', ') + ")");
     childGroup = this._childHead;
-    while (childGroup != null) {
+    while (childGroup !== null) {
       lines.push('  ' + childGroup.toString().split('\n').join('\n  '));
       childGroup = childGroup._next;
     }
@@ -696,7 +696,7 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
       var list = collection;
       for (index = 0, end = list.length; index < end; index++) {
         item = list[index];
-        if (record == null || item !== record.item) {
+        if (record === null || item !== record.item) {
           record = this.mismatch(record, item, index);
           maybeDirty = true;
         } else if (maybeDirty) {
@@ -708,7 +708,7 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     } else {
       index = 0;
       for (item in collection) {
-        if (record == null || item !== record.item) {
+        if (record === null || item !== record.item) {
           record = this.mismatch(record, item, index);
           maybeDirty = true;
         } else if (maybeDirty) {
@@ -872,7 +872,7 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     } else {
       prev._nextRemovedRec = next;
     }
-    if (next == null) {
+    if (next === null) {
       this._removalsTail = prev;
     } else {
       next._prevRemovedRec = prev;
@@ -952,7 +952,7 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
   _moves_add(record) {
     // TODO: Traceur assertions
     //assert(record._nextMovedRec == null);
-    if (this._movesTail == null) {
+    if (this._movesTail === null) {
       // TODO: Traceur assertions
       //assert(_movesHead == null);
       this._movesTail = this._movesHead = record;
@@ -1053,7 +1053,7 @@ class _DuplicateItemRecordList {
     } else {
       // TODO: Traceur assertions
       //assert(record.item === head.item);
-      if (beforeRecord == null) {
+      if (beforeRecord === null) {
         this.tail._nextDupRec = record;
         record._prevDupRec = this.tail;
         this.tail = record;
@@ -1073,8 +1073,9 @@ class _DuplicateItemRecordList {
   }
   get(key, hideIndex) {
     var record = this.head;
+    if (typeof hideIndex !== "number") hideIndex = null;
     while(record !== null) {
-      if (hideIndex == null ||
+      if (hideIndex === null ||
           hideIndex < record.currentIndex && record.item === key) {
         return record;
       }
@@ -1088,12 +1089,12 @@ class _DuplicateItemRecordList {
     // that the routine (and library) behaves correctly.
     var prev = record._prevDupRec;
     var next = record._nextDupRec;
-    if (prev == null) {
+    if (prev === null) {
       this.head = next;
     } else {
       prev._nextDupRec = next;
     }
-    if (next == null) {
+    if (next === null) {
       this.tail = prev;
     } else {
       next._prevDupRec = prev;
@@ -1103,7 +1104,7 @@ class _DuplicateItemRecordList {
     // like C/C++ (which, to my knowledge, it is)
     // assert((record._prevDupRec = null) == null);
     // assert((record._nextDupRec = null) == null);
-    return this.head == null;
+    return this.head === null;
   }
 }
 class DuplicateMap {
@@ -1127,7 +1128,7 @@ class DuplicateMap {
   }
   get(key, hideIndex) {
     var list = this._map.get(key);
-    return list == null ? null : list.get(key, hideIndex);
+    return !(list instanceof _DuplicateItemRecordList) ? null : list.get(key, hideIndex);
   }
   remove(record) {
     var list = this._map.get(record.item);
