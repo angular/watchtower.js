@@ -13,6 +13,8 @@ module.exports = function(config) {
       { pattern: 'node_modules/es6-shim/es6-shim.js', included: false }
     ],
 
+    reporters: ['dots'],
+
     preprocessors: {
       'src/**/*.js': ['traceur'],
       'test/**/*.spec.js': ['traceur']
