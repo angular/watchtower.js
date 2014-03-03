@@ -4,7 +4,7 @@ function checkLinkedListProperty(keys, expected, actual, diffs) {
     var item = list[i];
     if (listItem === null) {
       equals = false;
-      diffs.push('collection too short: ${item}');
+      diffs.push('collection too short: ' + item);
     } else {
       if (listItem.toString() !== item) {
         equals = false;
@@ -15,7 +15,7 @@ function checkLinkedListProperty(keys, expected, actual, diffs) {
   }
   if (listItem !== null) {
     equals = false;
-    diffs.push('collection too long: ${listItem}');
+    diffs.push('collection too long: ' + listItem);
   }
   return equals;
 }
