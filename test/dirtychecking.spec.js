@@ -400,7 +400,6 @@ describe('DirtyCheckingChangeDetector', function() {
       delete map['a'];
       delete map['d'];
       expect(detector.collectChanges().currentValue).toEqualMapRecord({
-        map: ['a', 'd'],
         removals: ['a[A -> null]', 'd[D -> null]']
       });
     });
