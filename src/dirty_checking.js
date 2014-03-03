@@ -602,6 +602,9 @@ class KeyValueRecord extends MapKeyValue {
     this._nextKeyValue = this._nextAddedKeyValue = this._nextChangedKeyValue = null;
     this._nextRemovedKeyValue = this._prevRemovedKeyValue = null;
   }
+  get key() {
+    return this._key;
+  }
   get previousValue() {
     return this._previousValue;
   }
