@@ -319,7 +319,7 @@ describe('DirtyCheckingChangeDetector', function() {
     });
 
 
-    it('should support insertions/moves', function() {
+    xit('should support insertions/moves', function() {
       var list = ['a', 'a', 'b', 'b'];
       var record = detector.watch(list, null, 'handler');
       detector.collectChanges();
@@ -339,7 +339,7 @@ describe('DirtyCheckingChangeDetector', function() {
 
     /* TODO: come up with a more meaningful description for this spec. This is really unclear.
        https://github.com/angular/angular.dart/blob/8e1e69d/test/change_detection/dirty_checking_change_detector_spec.dart#L336 */
-    it('should bug', function() {
+    xit('should bug', function() {
       var list = [1, 2, 3, 4];
       var record = detector.watch(list, null, 'handler');
       expect(detector.collectChanges().currentValue).toEqualCollectionRecord({
