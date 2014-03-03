@@ -48,7 +48,7 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
     return this._recordAdd(new DirtyCheckingRecord(this, context, field, getter, handler));
   }
   remove() {
-    var root;
+    var root = this._root;
     // TODO: Traceur assertions
     // assert((root = _root) != null);
     // assert(root._assertRecordsOk());
@@ -743,9 +743,9 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     while(record !== null) {
       record.previousIndex = record.currentIndex;
       var nextRecord = record._nextMovedRec;
-      record._nextMovedRec = null;
       // wat.
       // assert((record._nextMovedRec = null) == null);
+      record._nextMovedRec = null;
       record = nextRecord;
     }
     this._movesHead = this._movesTail = null;
@@ -867,9 +867,9 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     var prev = record._prevRemovedRec;
     var next = record._nextRemovedRec;
     // TODO: Traceur assertions... also wat.
-    record._prevRemovedRec = record._nextRemovedRec = null;
     //assert((record._prevRemovedRec = null) == null);
     //assert((record._nextRemovedRec = null) == null);
+    record._prevRemovedRec = record._nextRemovedRec = null;
     if (prev === null) {
       this._removalsHead = next;
     } else {
@@ -937,9 +937,9 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     var prev = record._prevRec;
     var next = record._nextRec;
     // TODO: Traceur assertions. wat.
-    record._prevRec = record._nextRec = null;
     //assert((record._prevRec = null) == null);
     //assert((record._nextRec = null) == null);
+    record._prevRec = record._nextRec = null;
     if (prev === null) {
       this._collectionHead = next;
     } else {
@@ -1107,6 +1107,7 @@ class _DuplicateItemRecordList {
     // like C/C++ (which, to my knowledge, it is)
     // assert((record._prevDupRec = null) == null);
     // assert((record._nextDupRec = null) == null);
+    record._prevDupRec = record._nextDupRec = null;
     return this.head === null;
   }
 }
