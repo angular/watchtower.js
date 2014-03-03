@@ -16,3 +16,5 @@ before_script:
 script:
   - ./lib/travis/build.sh
 
+after_script:
+  - ./lib/travis/print_logs.sh
