@@ -13,11 +13,18 @@ module.exports = function(config) {
       { pattern: 'node_modules/es6-shim/es6-shim.js', included: false }
     ],
 
-    reporters: ['dots'],
+    reporters: ['dots', 'coverage'],
 
     preprocessors: {
-      'src/**/*.js': ['traceur'],
+      'src/**/*.js': ['traceur', 'coverage'],
       'test/**/*.spec.js': ['traceur']
+    },
+
+    coverageReporter: {
+      reporters: [
+        { type: 'text' },
+        { type: 'lcovonly' }
+      ]
     }
   });  
 }
