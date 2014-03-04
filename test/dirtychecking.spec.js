@@ -319,14 +319,14 @@ describe('DirtyCheckingChangeDetector', function() {
     });
 
 
-    xit('should support insertions/moves', function() {
+    it('should support insertions/moves', function() {
       var list = ['a', 'a', 'b', 'b'];
       var record = detector.watch(list, null, 'handler');
       detector.collectChanges();
       list.unshift('b');
       expect(list).toEqual(['b', 'a', 'a', 'b', 'b']);
       expect(detector.collectChanges().currentValue).toEqualCollectionRecord({
-        collection: ['b[2 -> 0]', 'a[0 -> 1]', 'b[null -> 4]'],
+        collection: ['b[2 -> 0]', 'a[0 -> 1]', 'a[1 -> 2]', 'b', 'b[null -> 4]'],
         additions: ['b[null -> 4]'],
         moves: ['b[2 -> 0]', 'a[0 -> 1]', 'a[1 -> 2]']
       });
@@ -339,12 +339,12 @@ describe('DirtyCheckingChangeDetector', function() {
 
     /* TODO: come up with a more meaningful description for this spec. This is really unclear.
        https://github.com/angular/angular.dart/blob/8e1e69d/test/change_detection/dirty_checking_change_detector_spec.dart#L336 */
-    xit('should bug', function() {
+    it('should bug', function() {
       var list = [1, 2, 3, 4];
       var record = detector.watch(list, null, 'handler');
       expect(detector.collectChanges().currentValue).toEqualCollectionRecord({
-        collection: ['1[null -> 0]', '2[null -> 1]', '3[null -> 2]', '4[null -> 4]'],
-        additions: ['1[null -> 0]', '2[null -> 1]', '3[null -> 2]', '4[null -> 4]']
+        collection: ['1[null -> 0]', '2[null -> 1]', '3[null -> 2]', '4[null -> 3]'],
+        additions: ['1[null -> 0]', '2[null -> 1]', '3[null -> 2]', '4[null -> 3]']
       });
       detector.collectChanges();
 
