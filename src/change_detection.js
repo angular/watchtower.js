@@ -30,7 +30,7 @@ class Record {
 
   get field() { throw "get field() not implemented"; }
 
-  get handler() { throw "get handler() not implemented"; }
+  //get handler() { throw "get handler() not implemented"; }
 
   //get currentValue() { throw "get currentValue() not implemented"; }
 
