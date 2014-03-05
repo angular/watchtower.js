@@ -12,7 +12,7 @@ describe('DirtyCheckingChangeDetector', function() {
       'age': function(o) { return o.age; }
     });
 
-    detector = new DirtyCheckingChangeDetector(null, getterCache);
+    detector = new DirtyCheckingChangeDetector(getterCache);
   });
 
   describe('object field', function() {
@@ -114,7 +114,7 @@ describe('DirtyCheckingChangeDetector', function() {
 
 
     // TODO: tests involving watch groups are disabled until WatchGroup is implemented.
-    xit('should remove all watches in group and group\'s children', function() {
+    it('should remove all watches in group and group\'s children', function() {
       var obj = {};
       var ra = detector.watch(obj, 'a', '0a');
       var child1a = detector.newGroup();
@@ -131,11 +131,11 @@ describe('DirtyCheckingChangeDetector', function() {
       expect(detector.collectChanges()).toEqualChanges(['0a', '0A', '1a', '1A', '2A', '1b']);
       obj['a'] = 2;
       child1a.remove(); // should also remove child2
-      expect(detector.collectChanges).toEqualChanges(['0a', '0A', '1b']);
+      expect(detector.collectChanges()).toEqualChanges(['0a', '0A', '1b']);
     });
 
 
-    xit('should add watches within its own group', function() {
+    it('should add watches within its own group', function() {
       var obj = {};
       var ra = detector.watch(obj, 'a', 'a');
       var child = detector.newGroup();
@@ -160,11 +160,13 @@ describe('DirtyCheckingChangeDetector', function() {
     });
 
 
-    xit('should properly add children', function() {
+    it('should properly add children', function() {
       var a = detector.newGroup();
       var aChild = a.newGroup();
       var b = detector.newGroup();
-      expect(detector.collectChanges).not.toThrow();
+      expect(function() {
+        detector.collectChanges();
+      }).not.toThrow();
     });
   });
 

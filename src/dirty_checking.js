@@ -35,6 +35,7 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
     this._parent = parent;
     this._getterCache = cache;
     this._marker = DirtyCheckingRecord.marker();
+    this._childHead = this._childTail = this._next = this._prev = null;
     if (parent === null) {
       this._recordHead = this._recordTail = this._marker;
     } else {
@@ -112,7 +113,8 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
       this._childHead = this._childTail = child;
     } else {
       child._prev = this._childTail;
-      this._childTail._next = this._childTail = child;
+      this._childTail._next = child;
+      this._childTail = child;
     }
     // TODO: Traceur assertions
     // assert(_root._assertRecordsOk());
@@ -179,6 +181,10 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
   }
 }
 export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGroup {
+  constructor(cache) {
+    super(null, cache);
+  }
+
   _assertRecordsOk() {
     var record = this._recordHead,
         groups = [this],
@@ -239,7 +245,6 @@ export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGrou
   get _root() {
     return this;
   }
-  newGroup() {}
 }
 class DirtyCheckingRecord extends ChangeRecord {
   constructor(group, object, fieldName, getter, handler) {

@@ -70,6 +70,24 @@ var mapRemovalsKeys = {
 
 beforeEach(function() {
   this.addMatchers({
+    toEqualChanges: function(expected) {
+      var count = 0;
+      var actual = this.actual, changes = actual;
+      while(changes !== null) {
+        if (changes.handler !== expected[count++]) return false;
+        changes = changes.nextChange;
+      }
+      this.message = function() {
+        var changes = actual, list = [];
+        while (changes !== null) {
+          list.push(changes.handler);
+          changes = changes.nextChange;
+        }
+        return `expected changes [${list.join(', ')}] to equal [${expected.join(', ')}]`;
+      }
+      return count == expected.length;
+    },
+
     toEqualCollectionRecord: function(expected) {
       var actual = this.actual, diffs = [];
       if (typeof expected.collection === 'undefined') expected.collection = [];
