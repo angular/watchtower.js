@@ -113,7 +113,6 @@ describe('DirtyCheckingChangeDetector', function() {
     });
 
 
-    // TODO: tests involving watch groups are disabled until WatchGroup is implemented.
     it('should remove all watches in group and group\'s children', function() {
       var obj = {};
       var ra = detector.watch(obj, 'a', '0a');
