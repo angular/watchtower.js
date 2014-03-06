@@ -9,7 +9,8 @@ import {
 import {
   _LinkedList,
   _LinkedListItem,
-  _WatchList
+  _WatchList,
+  _ArgHandlerList
 } from './linked_list.js';
 
 import {
@@ -19,7 +20,6 @@ import {
   _InvokeHandler,
   _FieldHandler,
   _ArgHandler,
-  _ArgHandlerList,
   _EvalWatchList,
   _EvalWatchRecord
 } from './watch_record.js';

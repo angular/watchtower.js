@@ -135,6 +135,7 @@ export class _ArgHandler extends _Handler {
   constructor(watchGroup, watchRecord, index) {
     // TODO(caitp): assert that watchRecord is an _EvalWatchRecord?
     super(watchGroup, 'arg[' + index + ']');
+    this._previousArgHandler = this._nextArgHandler = null;
     this.watchRecord = watchRecord;
     this.index = index;
   }

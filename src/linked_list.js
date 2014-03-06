@@ -93,7 +93,7 @@ export class _ArgHandlerList {
       list._argHandlerHead = list._argHandlerTail = item;
     } else {
       item._previousArgHandler = list._argHandlerTail;
-      list._argHandlerTail._nextArgHandlerItem = item;
+      list._argHandlerTail._nextArgHandler = item;
       list._argHandlerTail = item;
     }
     return item;
