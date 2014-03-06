@@ -4,7 +4,7 @@ export class Logger {
   }
 
   log(message) {
-    this._list.push('' + message);
+    this._list.push(message);
   }
 
   clear() {
