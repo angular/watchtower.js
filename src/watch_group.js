@@ -360,7 +360,7 @@ export class RootWatchGroup extends WatchGroup {
       try {
         ++evalCount;
         var change = evalRecord.check();
-        if (change !== null && changeLog !== null)
+        if (change !== null && changeLog)
           changeLog(evalRecord.handler.expression,
                     evalRecord.currentValue,
                     evalRecord.previousValue);
