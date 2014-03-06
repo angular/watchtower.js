@@ -2,7 +2,8 @@ import {
   _LinkedList,
   _LinkedListItem,
   _WatchList,
-  _ArgHandlerList
+  _ArgHandlerList,
+  _EvalWatchList
 } from './linked_list.js';
 
 import {
@@ -43,7 +44,9 @@ class _Handler {
 
       // Remove outselves from cache, or else new registrations will go to us, but we are dead
       // Potential GC pressure...
-      delete this.watchGrp._cache[this.expression];
+      if (this.watchGrp) {
+        delete this.watchGrp._cache[this.expression];
+      }
 
       if (this.forwardingHandler !== null) {
         // TODO(misko): why do we need this check? --- Because _LinkedList._remove() manipulates
@@ -298,6 +301,14 @@ export class _EvalWatchRecord {
     // TODO(caitp): Investigate this, it doesn't seem to make a lot of sense. Is this because it
     // lives in the evalWatchList rather than a different sort of list?
     return null;
+  }
+
+  remove() {
+    // TODO(caitp): Traceur assertions
+    // assert(this.mode !== _MODE_DELETED_);
+    this.mode = _MODE_DELETED_;
+    this.watchGrp._evalCost--;
+    _EvalWatchList._remove(this.watchGrp, this);
   }
 
   toString() {
