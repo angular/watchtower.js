@@ -10,6 +10,7 @@ import {
   _LinkedList,
   _LinkedListItem,
   _WatchList,
+  _WatchGroupList,
   _ArgHandlerList,
   _EvalWatchList
 } from './linked_list.js';
@@ -30,13 +31,16 @@ function putIfAbsent(obj, key, ctor) {
 }
 
 export class WatchGroup {
-  WatchGroup(parentWatchGroup, changeDetector, context, cache, rootGroup) {
+  constructor(parentWatchGroup, changeDetector, context, cache, rootGroup) {
     // TODO: Traceur Assertions
     // assert(parentWatchGroup is WatchGroup)
     // assert(changeDetector is ChangeDetector)
     // assert(context and context is Function or Object)
     // assert(rootGroup is RootWatchGroup)
     this._parentWatchGroup = parentWatchGroup;
+    // Initialize _WatchGroupList
+    this._watchGroupHead = this._watchGroupTail = null;
+    this._nextWatchGroup = this._prevWatchGroup = null;
     this.id = parentWatchGroup.id + '.' + parentWatchGroup._nextChildId++;
     this._changeDetector = changeDetector;
     this.context = context;
@@ -156,7 +160,7 @@ export class WatchGroup {
     var cache = context === null ? this._cache : {};
 
     var childGroup = new WatchGroup(this, this._changeDetector.newGroup(), context, cache, root);
-    this._watchGroupList.add(this, childGroup);
+    _WatchGroupList._add(this, childGroup);
 
     var marker = childGroup._marker;
 
@@ -173,6 +177,12 @@ export class WatchGroup {
     // TODO:(misko) This code is not right.
     // 1) It fails to release [ChangeDetector] [WatchRecord]s
     // 2) it needs to cleanup caches if the cache is being shared
+
+    _WatchGroupList._remove(this._parentWatchGroup, this);
+    this._nextWatchGroup = this._prevWatchGroup = null;
+    this._changeDetector.remove();
+    this._rootGroup._removeCount++;
+    this._parentWatchGroup = null;
 
     // Unlink the _watchRecord
     var firstEvalWatch = this._evalWatchHead;
@@ -311,6 +321,9 @@ export class RootWatchGroup extends WatchGroup {
     this._cache = {};
 
     this._parentWatchGroup = null;
+    // Initialize _WatchGroupList
+    this._watchGroupTail = this._watchGroupHead = null;
+
     this.id = '';
     this._nextChildId = 0;
 

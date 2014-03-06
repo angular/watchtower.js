@@ -80,6 +80,36 @@ export class _WatchList {
   }
 }
 
+export class _WatchGroupList {
+  static _add(list, item) {
+    // TODO(caitp): Traceur assertions
+    // assert(item._nextWatchGroup === null);
+    // assert(item._prevWatchGroup === null);
+    if (list._watchGroupTail === null) {
+      list._watchGroupHead = list._watchGroupTail = item;
+    } else {
+      item._prevWatchGroup = list._watchGroupTail;
+      list._watchGroupTail._nextWatchGroup = item;
+      list._watchGroupTail = item;
+    }
+    return item;
+  }
+
+  static _isEmpty(list) {
+    return list._watchGroupHead === null;
+  }
+
+  static _remove(list, item) {
+    var previous = item._prevWatchGroup;
+    var next = item._nextWatchGroup;
+
+    if (previous === null) list._watchGroupHead = next;
+    else previous._nextWatchGroup = next;
+    if (next === null) list._watchGroupTail = previous;
+    else next._prevWatchGroup = previous;
+  }
+}
+
 export class _ArgHandlerList {
   static _initialize(list) {
     list._argHandlerHead = list._argHandlerTail = null;
