@@ -139,7 +139,7 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
         cursor = this._recordHead,
         end = this._childInclRecordTail;
     while (cursor !== null) {
-      if (cursor._mode !== DirtyCheckingRecord._MODE_MARKER_) {
+      if (cursor._mode !== _MODE_MARKER_) {
         ++count;
       }
       if (cursor === end) break;
