@@ -47,8 +47,9 @@ export class ContextReferenceAST extends AST {
 
 export class ConstantAST extends AST {
   constructor(constant, expression) {
+    if (arguments.length < 2) expression = null;
     super(expression === null
-        ? (typeof constant === "string" ? '"' + constant + '"' : '' + expression)
+        ? (typeof constant === "string" ? '"' + constant + '"' : '' + constant)
         : expression);
     this.constant = constant;
   }
