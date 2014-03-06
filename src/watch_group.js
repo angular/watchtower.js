@@ -10,7 +10,8 @@ import {
   _LinkedList,
   _LinkedListItem,
   _WatchList,
-  _ArgHandlerList
+  _ArgHandlerList,
+  _EvalWatchList
 } from './linked_list.js';
 
 import {
@@ -20,7 +21,6 @@ import {
   _InvokeHandler,
   _FieldHandler,
   _ArgHandler,
-  _EvalWatchList,
   _EvalWatchRecord
 } from './watch_record.js';
 
@@ -44,10 +44,9 @@ export class WatchGroup {
     this._rootGroup = rootGroup;
     this._nextChildId = 0;
 
-    // TODO: When _EvalWatchRecord is implemented...
-    // this._marker = _EvalWatchRecord.marker();
-    // this._marker.watchGrp = this;
-    // this._evalWatchHead = this._evalWatchTail = this._marker;
+    this._marker = _EvalWatchRecord.marker();
+    this._marker.watchGrp = this;
+    this._evalWatchHead = this._evalWatchTail = this._marker;
 
     // Stats...
     this._fieldCost = 0;

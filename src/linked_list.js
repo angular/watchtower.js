@@ -113,3 +113,51 @@ export class _ArgHandlerList {
     else next._previousArgHandler = previous;
   }
 }
+
+export class _EvalWatchList {
+  static _add(list, item) {
+    // TODO: Traceur assertions
+    // assert(item._nextEvalWatch === null);
+    // assert(item._prevEvalWatch === null);
+    var prev = list._evalWatchTail;
+    var next = prev._nextEvalWatch;
+
+    if (prev === list._marker) {
+      list._evalWatchHead = list._evalWatchTail = item;
+      prev = prev._prevEvalWatch;
+      list._marker._prevEvalWatch = null;
+      list._marker._nextEvalWatch = null;
+    }
+    item._nextEvalWatch = next;
+    item._prevEvalWatch = prev;
+
+    if (prev !== null) prev._nextEvalWatch = item;
+    if (next !== null) next._prevEvalWatch = item;
+
+    return (list._evalWatchTail = item);
+  }
+
+  static _isEmpty(list) {
+    return list._evalWatchHead === null;
+  }
+
+  static _remove(list, item) {
+    // TODO: Traceur assertions
+    // assert(item.watchGrp === list);
+    var prev = item._prevEvalWatch;
+    var next = item._nextEvalWatch;
+
+    if (list._evalWatchHead === list._evalWatchTail) {
+      list._evalWatchHead = list._evalWatchTail = list._marker;
+      list._marker._nextEvalWatch = next;
+      list._marker._prevEvalWatch = prev;
+      if (prev !== null) prev._nextEvalWatch = list._marker;
+      if (next !== null) next._prevEvalWatch = list._marker;
+    } else {
+      if (item === list._evalWatchHead) list._evalWatchHead = next;
+      if (item === list._evalWatchTail) list._evalWatchTail = prev;
+      if (prev !== null) prev._nextEvalWatch = next;
+      if (next !== null) next._prevEvalWatch = prev;
+    }
+  }
+}

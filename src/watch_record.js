@@ -196,7 +196,7 @@ export class _EvalWatchRecord {
     // TODO(caitp): The ES6 draft is not super clear about what can be done with Symbols.
     // This may be entirely unnecessary.
     // this.symbol = name === null ? null : new Symbol(name);
-    this._nextEvalWatch = null;
+    this._prevEvalWatch = this._nextEvalWatch = null;
 
     if (marker === true) return;
     this.args = new Array(arity);
