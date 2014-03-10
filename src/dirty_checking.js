@@ -183,6 +183,7 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
 export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGroup {
   constructor(cache) {
     super(null, cache);
+    this._fakeHead = DirtyCheckingRecord.marker();
   }
 
   _assertRecordsOk() {
@@ -209,18 +210,13 @@ export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGrou
   }
   collectChanges(exceptionHandler, stopwatch) {
     if (stopwatch) stopwatch.start();
-    var changeHead = null,
-        changeTail = null,
+    var changeTail = this._fakeHead,
         current = this._recordHead,
         count = 0;
     while (current !== null) {
       try {
         if (current.check() !== null) {
-          if (changeHead !== null) {
-            changeTail = changeTail._nextChange = current;
-          } else {
-            changeHead = changeTail = current;
-          }
+          changeTail = changeTail._nextChange = current;
         }
         ++count;
       } catch (e) {
@@ -232,12 +228,12 @@ export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGrou
       }
       current = current._nextRecord;
     }
-    if (changeTail !== null) changeTail._nextChange = null;
+    changeTail._nextChange = null;
     if (stopwatch) {
       stopwatch.stop();
       stopwatch.increment(count);
     }
-    return changeHead;
+    return this._fakeHead._nextChange;
   }
   remove() {
     throw "Root ChangeDetector can not be removed";
