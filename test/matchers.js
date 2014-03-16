@@ -73,15 +73,15 @@ beforeEach(function() {
     toEqualChanges: function(expected) {
       var count = 0;
       var actual = this.actual, changes = actual;
-      while(changes !== null) {
-        if (changes.handler !== expected[count++]) return false;
-        changes = changes.nextChange;
+      while(changes.iterate()) {
+        var current = changes.current;
+        if (current.handler !== expected[count++]) return false;
       }
       this.message = function() {
         var changes = actual, list = [];
-        while (changes !== null) {
-          list.push(changes.handler);
-          changes = changes.nextChange;
+        while (changes.iterate()) {
+          var current = changes.current;
+          list.push(current.handler);
         }
         return `expected changes [${list.join(', ')}] to equal [${expected.join(', ')}]`;
       }

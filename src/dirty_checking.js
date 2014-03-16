@@ -74,6 +74,11 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
       nextGroup._prev = prevGroup;
     }
     this._parent = null;
+    this._prev = this._next = null;
+    this._recordHead._prev = null;
+    this._recordTail._prev = null;
+    this._recordHead = this._recordTail = null;
+    
     // TODO: Traceur assertions
     // assert(root._assertRecordsOk());
   }
@@ -215,7 +220,7 @@ export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGrou
         count = 0;
     while (current !== null) {
       try {
-        if (current.check() !== null) {
+        if (current.check()) {
           changeTail = changeTail._nextChange = current;
         }
         ++count;
@@ -233,7 +238,9 @@ export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGrou
       stopwatch.stop();
       stopwatch.increment(count);
     }
-    return this._fakeHead._nextChange;
+    var changeHead = this._fakeHead._nextChange;
+    this._fakeHead._nextChange = null;
+    return new ChangeIterator(changeHead);
   }
   remove() {
     throw "Root ChangeDetector can not be removed";
@@ -242,6 +249,33 @@ export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGrou
     return this;
   }
 }
+
+class ChangeIterator {
+  constructor(next) {
+    this._current = null;
+    this._next = next;
+  }
+
+  get current() {
+    return this._current;
+  }
+
+  iterate() {
+    this._current = this._next;
+    if (this._next !== null) {
+      this._next = this._current._nextChange;
+
+      /**
+       * This is important to prevent memory leaks. If the nextChange record is not reset, then a
+       * record may be pointing to a deleted change detector group, and it will not release the
+       * reference until it fires again. So we have to be eager about releasing references.
+       */
+      this._current._nextChange = null;
+    }
+    return this._current !== null;
+  }
+}
+
 class DirtyCheckingRecord extends ChangeRecord {
   constructor(group, object, fieldName, getter, handler) {
     this._group = group;
@@ -313,7 +347,7 @@ class DirtyCheckingRecord extends ChangeRecord {
     // assert(_mode != null); --- Traceur v0.0.24 missing assert()
     var current;
     switch (this._mode) {
-      case _MODE_MARKER_: return null;
+      case _MODE_MARKER_: return false;
       case _MODE_REFLECT_:
         // TODO:
         // I'm not sure how much support for Reflection is available in Traceur
@@ -332,7 +366,7 @@ class DirtyCheckingRecord extends ChangeRecord {
         break;
       case _MODE_MAP_:
       case _MODE_ITERABLE_:
-        return this.currentValue._check(this.object) ? this : null;
+        return this.currentValue._check(this.object);
       default:
         throw "UNREACHABLE";
         // assert(false); --- Traceur 0.0.24 missing assert()
@@ -353,10 +387,10 @@ class DirtyCheckingRecord extends ChangeRecord {
         // Ignore NaN -> NaN changes
         this.previousValue = last;
         this.currentValue = current;
-        return this;
+        return true;
       }
     }
-    return null;
+    return false;
   }
   remove() {
     this._group._recordRemove(this);

@@ -111,8 +111,7 @@ export class _FieldHandler extends _Handler {
   // This function forwards the watched object to the next [_Handler] synchronously
   acceptValue(object) {
     this.watchRecord.object = object;
-    var changeRecord = this.watchRecord.check();
-    if (changeRecord !== null) this.onChange(changeRecord);
+    if (this.watchRecord.check()) this.onChange(this.watchRecord);
   }
 }
 
@@ -124,8 +123,7 @@ export class _CollectionHandler extends _Handler {
   // This function forwards the watched object to the next [_Handler] synchronously
   acceptValue(object) {
     this.watchRecord.object = object;
-    var changeRecord = this.watchRecord.check();
-    if (changeRecord !== null) this.onChange(changeRecord);
+    if (this.watchRecord.check()) this.onChange(this.watchRecord);
   }
 
   _releaseWatch() {
@@ -270,9 +268,9 @@ export class _EvalWatchRecord {
     switch (this.mode) {
     case _MODE_MARKER_:
     case _MODE_NULL_:
-      return null;
+      return false;
     case _MODE_FUNCTION_:
-      if (!this.dirtyArgs) return null;
+      if (!this.dirtyArgs) return false;
       value = this.fn.apply(null, this.args);
       this.dirtyArgs = false;
       break;
@@ -291,10 +289,10 @@ export class _EvalWatchRecord {
         this.previousValue = current;
         this.currentValue = value;
         this.handler.onChange(this);
-        return this;
+        return true;
       }
     }
-    return null;
+    return false;
   }
 
   get nextChange() {

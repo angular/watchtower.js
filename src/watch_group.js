@@ -176,7 +176,6 @@ export class WatchGroup {
   remove() {
     // TODO:(misko) This code is not right.
     // 1) It fails to release [ChangeDetector] [WatchRecord]s
-    // 2) it needs to cleanup caches if the cache is being shared
 
     _WatchGroupList._remove(this._parentWatchGroup, this);
     this._nextWatchGroup = this._prevWatchGroup = null;
@@ -192,6 +191,9 @@ export class WatchGroup {
     var next = lastEvalWatch._nextEvalWatch;
     if (prev !== null) prev._nextEvalWatch = next;
     if (next !== null) next._previousEvalWatch = prev;
+    this._evalWatchHead._previousEvalWatch = null;
+    this._evalWatchTail._nextEvalWatch = null;
+    this._evalWatchHead = this._evalWatchTail = null;
   }
 
   toString() {
@@ -354,15 +356,16 @@ export class RootWatchGroup extends WatchGroup {
   // completed).
   detectChanges(exceptionHandler, changeLog, fieldStopWatch, evalStopWatch, processStopWatch) {
     // 1) Process the ChangeRecords from the change detector
-    var changeRecord = this._changeDetector.collectChanges(exceptionHandler, fieldStopWatch);
+    var changeDetector = this._changeDetector;
+    var changeRecordIterator = changeDetector.collectChanges(exceptionHandler, fieldStopWatch);
     if (processStopWatch) processStopWatch.start();
-    while (changeRecord !== null) {
+    while (changeRecordIterator.iterate()) {
+      var record = changeRecordIterator.current;
       if (changeLog)
-        changeLog(changeRecord.handler.expression,
-                  changeRecord.currentValue,
-                  changeRecord.previousValue);
-      changeRecord.handler.onChange(changeRecord);
-      changeRecord = changeRecord.nextChange;
+        changeLog(record.handler.expression,
+                  record.currentValue,
+                  record.previousValue);
+      record.handler.onChange(record);
     }
     if (processStopWatch) processStopWatch.stop();
 
@@ -372,8 +375,7 @@ export class RootWatchGroup extends WatchGroup {
     while (evalRecord !== null) {
       try {
         ++evalCount;
-        var change = evalRecord.check();
-        if (change !== null && changeLog)
+        if (evalRecord.check() && changeLog)
           changeLog(evalRecord.handler.expression,
                     evalRecord.currentValue,
                     evalRecord.previousValue);
