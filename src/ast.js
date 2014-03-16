@@ -115,7 +115,7 @@ class _ConstantWatchRecord extends WatchRecord {
   }
 
   check() {
-    return null;
+    return false;
   }
 
   remove() {

@@ -18,7 +18,7 @@ describe('DirtyCheckingChangeDetector', function() {
   describe('object field', function() {
     it('should detect nothing', function() {
       var changes = detector.collectChanges();
-      expect(changes).toBe(null);
+      expect(changes.iterate()).toBe(false);
     });
 
     it('should detect field changes', function() {
@@ -30,30 +30,33 @@ describe('DirtyCheckingChangeDetector', function() {
       detector.collectChanges();
 
       change = detector.collectChanges();
-      expect(change).toBe(null);
+      expect(change.iterate()).toBe(false);
 
       user.first = 'misko';
       user.last = 'hevery';
 
       change = detector.collectChanges();
-      expect(change.currentValue).toBe('misko');
-      expect(change.previousValue).toBe('');
-      expect(change.nextChange.currentValue).toBe('hevery');
-      expect(change.nextChange.previousValue).toBe('');
-      expect(change.nextChange.nextChange).toBe(null);
+      expect(change.iterate()).toBe(true);
+      expect(change.current.currentValue).toBe('misko');
+      expect(change.current.previousValue).toBe('');
+      expect(change.iterate()).toBe(true);
+      expect(change.current.currentValue).toBe('hevery');
+      expect(change.current.previousValue).toBe('');
+      expect(change.iterate()).toBe(false);
 
       // force different instance
       user.first = 'mis';
       user.first += 'ko';
 
       change = detector.collectChanges();
-      expect(change).toBe(null);
+      expect(change.iterate()).toBe(false);
 
       user.last = 'Hevery';
       change = detector.collectChanges();
-      expect(change.currentValue).toBe('Hevery');
-      expect(change.previousValue).toBe('hevery');
-      expect(change.nextChange).toBe(null);
+      expect(change.iterate()).toBe(true);
+      expect(change.current.currentValue).toBe('Hevery');
+      expect(change.current.previousValue).toBe('hevery');
+      expect(change.iterate()).toBe(false);
     });
 
 
@@ -64,13 +67,14 @@ describe('DirtyCheckingChangeDetector', function() {
       detector.collectChanges();
 
       var changes = detector.collectChanges();
-      expect(changes).toBe(null);
+      expect(changes.iterate()).toBe(false);
 
       user.age = 17; /* lets be generous! */
       changes = detector.collectChanges();
-      expect(changes.currentValue).toBe(17);
-      expect(changes.previousValue).not.toBe(changes.previousValue); /* sort of isNaN */
-      expect(changes.nextChange).toBe(null);
+      expect(changes.iterate()).toBe(true);
+      expect(changes.current.currentValue).toBe(17);
+      expect(changes.current.previousValue).not.toBe(changes.current.previousValue); /* sort of isNaN */
+      expect(changes.iterate()).toBe(false);
     });
 
 
@@ -81,8 +85,9 @@ describe('DirtyCheckingChangeDetector', function() {
 
       obj['name'] = 'Misko';
       var changes = detector.collectChanges();
-      expect(changes.currentValue).toBe('Misko');
-      expect(changes.previousValue).toBe('misko');
+      expect(changes.iterate()).toBe(true);
+      expect(changes.current.currentValue).toBe('Misko');
+      expect(changes.current.previousValue).toBe('misko');
     });
   });
 
@@ -95,21 +100,24 @@ describe('DirtyCheckingChangeDetector', function() {
 
       obj['a'] = obj['b'] = 1;
       var changes = detector.collectChanges();
-      expect(changes.handler).toBe('a');
-      expect(changes.nextChange.handler).toBe('b');
-      expect(changes.nextChange.nextChange).toBe(null);
+      expect(changes.iterate()).toBe(true);
+      expect(changes.current.handler).toBe('a');
+      expect(changes.iterate()).toBe(true);
+      expect(changes.current.handler).toBe('b');
+      expect(changes.iterate()).toBe(false);
 
       obj['a'] = obj['b'] = 2;
       a.remove();
       changes = detector.collectChanges();
-      expect(changes.handler).toBe('b');
-      expect(changes.nextChange).toBe(null);
+      expect(changes.iterate()).toBe(true);
+      expect(changes.current.handler).toBe('b');
+      expect(changes.iterate()).toBe(false);
 
       obj['a'] = obj['b'] = 3;
       b.remove();
 
       changes = detector.collectChanges();
-      expect(changes).toBe(null);
+      expect(changes.iterate()).toBe(false);
     });
 
 
@@ -173,42 +181,51 @@ describe('DirtyCheckingChangeDetector', function() {
   describe('list watching', function() {
     it('should detect changes in list', function() {
       var list = [];
+      var changes;
       var record = detector.watch(list, null, 'handler');
-      expect(detector.collectChanges()).toBe(null);
+      expect(detector.collectChanges().iterate()).toBe(false);
 
       list.push('a');
-      expect(detector.collectChanges().currentValue).toEqualCollectionRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualCollectionRecord({
         collection: ['a[null -> 0]'],
         additions: ['a[null -> 0]']
       });
 
       list.push('b');
-      expect(detector.collectChanges().currentValue).toEqualCollectionRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualCollectionRecord({
         collection: ['a', 'b[null -> 1]'],
         additions: ['b[null -> 1]']
       });
 
       list.push('c');
       list.push('d');
-      expect(detector.collectChanges().currentValue).toEqualCollectionRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualCollectionRecord({
         collection: ['a', 'b', 'c[null -> 2]', 'd[null -> 3]'],
         additions: ['c[null -> 2]', 'd[null -> 3]']
       });
 
-      var change;
       list.splice(2, 1);
       expect(list).toEqual(['a', 'b', 'd']);
-      expect(change = detector.collectChanges().currentValue).toEqualCollectionRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualCollectionRecord({
         collection: ['a', 'b', 'd[3 -> 2]'],
         additions: [],
         moves: ['d[3 -> 2]'],
         removals: ['c[2 -> null]']
       });
 
-      var change2;
       list.length = 0;
       list.push('d', 'c', 'b', 'a');
-      expect(change2 = detector.collectChanges().currentValue).toEqualCollectionRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualCollectionRecord({
         collection: ['d[2 -> 0]', 'c[null -> 1]', 'b[1 -> 2]', 'a[0 -> 3]'],
         additions: ['c[null -> 1]'],
         moves: ['d[2 -> 0]', 'b[1 -> 2]', 'a[0 -> 3]']
@@ -269,7 +286,7 @@ describe('DirtyCheckingChangeDetector', function() {
       detector.collectChanges();
 
       list[1] = 'b' + 'oo';
-      expect(detector.collectChanges()).toBe(null);
+      expect(detector.collectChanges().iterate()).toBe(false);
     });
 
 
@@ -278,18 +295,21 @@ describe('DirtyCheckingChangeDetector', function() {
       detector.watch(list, null, null);
       detector.collectChanges();
 
-      expect(detector.collectChanges()).toBe(null);
+      expect(detector.collectChanges().iterate()).toBe(false);
     });
 
 
     it('should remove and add same item', function() {
       var list = ['a', 'b', 'c'];
       var record = detector.watch(list, null, 'handler');
+      var changes;
       detector.collectChanges();
 
       list.splice(1, 1);
       expect(list).toEqual(['a', 'c']);
-      expect(detector.collectChanges().currentValue).toEqualCollectionRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualCollectionRecord({
         collection: ['a', 'c[2 -> 1]'],
         moves: ['c[2 -> 1]'],
         removals: ['b[1 -> null]']
@@ -297,7 +317,9 @@ describe('DirtyCheckingChangeDetector', function() {
 
       list.splice(1, 0, 'b');
       expect(list).toEqual(['a', 'b', 'c']);
-      expect(detector.collectChanges().currentValue).toEqualCollectionRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualCollectionRecord({
         collection: ['a', 'b[null -> 1]', 'c[1 -> 2]'],
         additions: ['b[null -> 1]'],
         moves: ['c[1 -> 2]']
@@ -308,11 +330,14 @@ describe('DirtyCheckingChangeDetector', function() {
     it('should support duplicates', function() {
       var list = ['a', 'a', 'a', 'b', 'b'];
       var record = detector.watch(list, null, 'handler');
+      var changes;
       detector.collectChanges();
 
       list.splice(0, 1);
       expect(list).toEqual(['a', 'a', 'b', 'b']);
-      expect(detector.collectChanges().currentValue).toEqualCollectionRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualCollectionRecord({
         collection: ['a', 'a', 'b[3 -> 2]', 'b[4 -> 3]'],
         moves: ['b[3 -> 2]', 'b[4 -> 3]'],
         removals: ['a[2 -> null]']
@@ -323,10 +348,13 @@ describe('DirtyCheckingChangeDetector', function() {
     it('should support insertions/moves', function() {
       var list = ['a', 'a', 'b', 'b'];
       var record = detector.watch(list, null, 'handler');
+      var changes;
       detector.collectChanges();
       list.unshift('b');
       expect(list).toEqual(['b', 'a', 'a', 'b', 'b']);
-      expect(detector.collectChanges().currentValue).toEqualCollectionRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualCollectionRecord({
         collection: ['b[2 -> 0]', 'a[0 -> 1]', 'a[1 -> 2]', 'b', 'b[null -> 4]'],
         additions: ['b[null -> 4]'],
         moves: ['b[2 -> 0]', 'a[0 -> 1]', 'a[1 -> 2]']
@@ -343,21 +371,28 @@ describe('DirtyCheckingChangeDetector', function() {
     it('should bug', function() {
       var list = [1, 2, 3, 4];
       var record = detector.watch(list, null, 'handler');
-      expect(detector.collectChanges().currentValue).toEqualCollectionRecord({
+      var changes;
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualCollectionRecord({
         collection: ['1[null -> 0]', '2[null -> 1]', '3[null -> 2]', '4[null -> 3]'],
         additions: ['1[null -> 0]', '2[null -> 1]', '3[null -> 2]', '4[null -> 3]']
       });
       detector.collectChanges();
 
       list.splice(0, 1);
-      expect(detector.collectChanges().currentValue).toEqualCollectionRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualCollectionRecord({
         collection: ['2[1 -> 0]', '3[2 -> 1]', '4[3 -> 2]'],
         moves: ['2[1 -> 0]', '3[2 -> 1]', '4[3 -> 2]'],
         removals: ['1[0 -> null]']
       });
 
       list.unshift(1);
-      expect(detector.collectChanges().currentValue).toEqualCollectionRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualCollectionRecord({
         collection: ['1[null -> 0]', '2[0 -> 1]', '3[1 -> 2]', '4[2 -> 3]'],
         additions: ['1[null -> 0]'],
         moves: ['2[0 -> 1]', '3[1 -> 2]', '4[2 -> 3]']
@@ -370,37 +405,48 @@ describe('DirtyCheckingChangeDetector', function() {
     it('should do basic map watching', function() {
       var map = {};
       var record = detector.watch(map, null, 'handler');
-      expect(detector.collectChanges()).toBe(null);
+      var changes;
+      expect(detector.collectChanges().iterate()).toBe(false);
 
       map['a'] = 'A';
-      expect(detector.collectChanges().currentValue).toEqualMapRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualMapRecord({
         map: ['a[null -> A]'],
         additions: ['a[null -> A]']
       });
 
       map['b'] = 'B';
-      expect(detector.collectChanges().currentValue).toEqualMapRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualMapRecord({
         map: ['a', 'b[null -> B]'],
         additions: ['b[null -> B]']
       });
 
       map['b'] = 'BB';
       map['d'] = 'D';
-      expect(detector.collectChanges().currentValue).toEqualMapRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualMapRecord({
         map: ['a', 'b[B -> BB]', 'd[null -> D]'],
         additions: ['d[null -> D]'],
         changes: ['b[B -> BB]']
       });
 
       delete map['b'];
-      expect(detector.collectChanges().currentValue).toEqualMapRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualMapRecord({
         map: ['a', 'd'],
         removals: ['b[BB -> null]']
       });
 
       delete map['a'];
       delete map['d'];
-      expect(detector.collectChanges().currentValue).toEqualMapRecord({
+      changes = detector.collectChanges();
+      changes.iterate();
+      expect(changes.current.currentValue).toEqualMapRecord({
         removals: ['a[A -> null]', 'd[D -> null]']
       });
     });
@@ -412,7 +458,7 @@ describe('DirtyCheckingChangeDetector', function() {
       detector.collectChanges();
 
       map['f' + 'oo'] = 0;
-      expect(detector.collectChanges()).toBe(null);
+      expect(detector.collectChanges().iterate()).toBe(false);
     });
 
 
@@ -422,7 +468,7 @@ describe('DirtyCheckingChangeDetector', function() {
       detector.watch(map, null, null);
       detector.collectChanges();
 
-      expect(detector.collectChanges()).toBe(null);
+      expect(detector.collectChanges().iterate()).toBe(false);
     });
   });
 });
