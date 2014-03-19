@@ -1,103 +1,137 @@
-function checkLinkedListProperty(keys, expected, actual, diffs) {
-  var listItem = actual[keys['listHead']], equals = true, list = expected[keys['list']];
-  for (var i = 0, ii = list.length; i < ii; ++i) {
-    var item = list[i];
-    if (listItem === null) {
+function checkArray(collection, expected, actual, diffs) {
+  var equals = true;
+  expected = expected[collection] || [];
+  actual = actual[collection];
+
+  for (var i=0, ii=expected.length; i<ii; ++i) {
+    var item = expected[i];
+    var real = actual[i];
+    if (i >= actual.length) {
       equals = false;
-      diffs.push('collection too short: ' + item);
+      diffs.push(`collection too short: ${item}`);
     } else {
-      if (listItem.toString() !== item) {
+      if (item !== real) {
         equals = false;
-        diffs.push('collection mismatch: expected ' + listItem + ' to equal ' + item);
+        diffs.push(`collection mismatch: expected ${real} to equal ${item}`);
       }
-      listItem = listItem[keys['listNext']];
     }
   }
-  if (listItem !== null) {
+
+  if (expected.length < actual.length) {
     equals = false;
-    diffs.push('collection too long: ' + listItem);
+    diffs.push(`collection too long: ${actual[expected.length]}`);
   }
   return equals;
 }
 
-var collectionKeys = {
-  list: 'collection',
-  listHead: 'collectionHead',
-  listNext: 'nextCollectionItem'
-};
+function linkedListToArray(list, next, transform) {
+  var result = [];
+  while (list) {
+    result.push(transform(list));
+    list = list[next];
+  }
+  return result;
+}
 
-var additionsKeys = {
-  list: 'additions',
-  listHead: 'additionsHead',
-  listNext: 'nextAddedItem'
-};
+function changeIteratorToList(it) {
+  var list = [];
+  while (it.iterate()) list.push(it.current);
+  return list;
+}
 
-var movesKeys = {
-  list: 'moves',
-  listHead: 'movesHead',
-  listNext: 'nextMovedItem'
-};
+function changeIteratorToHandlersList(it) {
+  var list = [];
+  while (it.iterate()) list.push(it.current.handler);
+  return list;
+}
 
-var removalsKeys = {
-  list: 'removals',
-  listHead: 'removalsHead',
-  listNext: 'nextRemovedItem'
-};
+function changeIteratorToDeltasList(it) {
+  var list = [];
+  while (it.iterate()) list.push(`${it.current.previousValue} -> ${it.current.currentValue}`);
+  return list;
+}
 
-var mapKeys = {
-  list: 'map',
-  listHead: 'mapHead',
-  listNext: 'nextKeyValue'
-};
+function changeIteratorToCollectionChanges(it) {
+  var changes = {
+    collection: [],
+    additions: [],
+    removals: [],
+    moves: []
+  };
 
-var mapAdditionsKeys = {
-  list: 'additions',
-  listHead: 'additionsHead',
-  listNext: 'nextAddedKeyValue'
-};
+  function serialize(item) {
+    return item.toString();
+  }
 
-var changesKeys = {
-  list: 'changes',
-  listHead: 'changesHead',
-  listNext: 'nextChangedKeyValue'
-};
+  if (it.iterate()) {
+    var record = it.current.currentValue;
+    changes.collection = linkedListToArray(record._collectionHead, '_nextRec', serialize);
+    changes.additions = linkedListToArray(record._additionsHead, '_nextAddedRec', serialize);
+    changes.removals = linkedListToArray(record._removalsHead, '_nextRemovedRec', serialize);
+    changes.moves = linkedListToArray(record._movesHead, '_nextMovedRec', serialize);
+  }
 
-var mapRemovalsKeys = {
-  list: 'removals',
-  listHead: 'removalsHead',
-  listNext: 'nextRemovedKeyValue'
-};
+  return changes;
+}
+
+function changeIteratorToMapChanges(it) {
+  var changes = {
+    map: [],
+    additions: [],
+    removals: [],
+    changes: []
+  };
+
+  function serialize(item) {
+    return item.toString();
+  }
+
+  if (it.iterate()) {
+    var record = it.current.currentValue;
+    changes.map = linkedListToArray(record._mapHead, '_nextKeyValue', serialize);
+    changes.additions = linkedListToArray(record._additionsHead, '_nextAddedKeyValue', serialize);
+    changes.removals = linkedListToArray(record._removalsHead, '_nextRemovedKeyValue', serialize);
+    changes.changes = linkedListToArray(record._changesHead, '_nextChangedKeyValue', serialize);
+  }
+
+  return changes;
+}
 
 beforeEach(function() {
   this.addMatchers({
-    toEqualChanges: function(expected) {
+    toEqualDeltas: function(expected) {
       var count = 0;
-      var actual = this.actual, changes = actual;
-      while(changes.iterate()) {
-        var current = changes.current;
-        if (current.handler !== expected[count++]) return false;
+      var actual = this.actual, deltas = changeIteratorToDeltasList(actual);
+      var i, ii;
+      for (i=0, ii=deltas.length; i<ii; ++i) {
+        if (deltas[i] !== expected[count++]) return false;
       }
       this.message = function() {
-        var changes = actual, list = [];
-        while (changes.iterate()) {
-          var current = changes.current;
-          list.push(current.handler);
-        }
-        return `expected changes [${list.join(', ')}] to equal [${expected.join(', ')}]`;
+        return `expected changes [${deltas.join(', ')}] to equal [${expected.join(', ')}]`;
+      }
+      return count == expected.length;      
+    },
+
+    toEqualChanges: function(expected) {
+      var count = 0;
+      var actual = this.actual, handlers = changeIteratorToHandlersList(actual);
+      var i, ii;
+      for (i=0, ii=handlers.length; i<ii; ++i) {
+        if (handlers[i] !== expected[count++]) return false;
+      }
+      this.message = function() {
+        return `expected changes [${handlers.join(', ')}] to equal [${expected.join(', ')}]`;
       }
       return count == expected.length;
     },
 
     toEqualCollectionRecord: function(expected) {
-      var actual = this.actual, diffs = [];
-      if (typeof expected.collection === 'undefined') expected.collection = [];
-      if (typeof expected.additions === 'undefined') expected.additions = [];
-      if (typeof expected.moves === 'undefined') expected.moves = [];
-      if (typeof expected.removals === 'undefined') expected.removals = [];
-      var result = checkLinkedListProperty(collectionKeys, expected, actual, diffs) &&
-                   checkLinkedListProperty(additionsKeys, expected, actual, diffs) &&
-                   checkLinkedListProperty(movesKeys, expected, actual, diffs) &&
-                   checkLinkedListProperty(removalsKeys, expected, actual, diffs);
+      var actual = changeIteratorToCollectionChanges(this.actual), diffs = [];
+      var result = checkArray('collection', expected, actual, diffs) &&
+                   checkArray('additions', expected, actual, diffs) &&
+                   checkArray('moves', expected, actual, diffs) &&
+                   checkArray('removals', expected, actual, diffs);
+
       this.message = function() {
         return diffs.join("\n");
       };
@@ -105,15 +139,11 @@ beforeEach(function() {
     },
 
     toEqualMapRecord: function(expected) {
-      var actual = this.actual, diffs = [];
-      if (typeof expected.map === 'undefined') expected.map = [];
-      if (typeof expected.additions === 'undefined') expected.additions = [];
-      if (typeof expected.changes === 'undefined') expected.changes = [];
-      if (typeof expected.removals === 'undefined') expected.removals = [];
-      var result = checkLinkedListProperty(mapKeys, expected, actual, diffs) &&
-                   checkLinkedListProperty(mapAdditionsKeys, expected, actual, diffs) &&
-                   checkLinkedListProperty(changesKeys, expected, actual, diffs) &&
-                   checkLinkedListProperty(mapRemovalsKeys, expected, actual, diffs);
+      var actual = changeIteratorToMapChanges(this.actual), diffs = [];
+      var result = checkArray('map', expected, actual, diffs) &&
+                   checkArray('additions', expected, actual, diffs) &&
+                   checkArray('changes', expected, actual, diffs) &&
+                   checkArray('removals', expected, actual, diffs);
       this.message = function() {
         return diffs.join("\n");
       };
