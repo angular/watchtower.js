@@ -309,6 +309,14 @@ export class WatchGroup {
     _EvalWatchList._add(this, evalWatchRecord);
     this._evalCost++;
 
+    if (this._rootGroup.isInsideInvokeDirty) {
+      // This check means that we are inside invoke reaction function.
+      // Registering a new EvalWatch at this point will not run the
+      // .check() on it which means it will not be processed, but its
+      // reaction function will be run with null. So we process it manually.
+      evalWatchRecord.check();
+    }
+
     return evalWatchRecord;
   }
 }
@@ -396,29 +404,38 @@ export class RootWatchGroup extends WatchGroup {
     // reaction functions asynchronously. This processes the asynchronous reaction function queue.
     var count = 0;
     var dirtyWatch = this._dirtyWatchHead;
+    this._dirtyWatchHead = null;
     var root = this._rootGroup;
     root._removeCount = 0;
 
-    while (dirtyWatch !== null) {
-      count++;
-      try {
-        if (root._removeCount === 0 || dirtyWatch._watchGroup.isAttached) {
-          dirtyWatch.invoke();
+    try {
+      while (dirtyWatch !== null) {
+        count++;
+        try {
+          if (root._removeCount === 0 || dirtyWatch._watchGroup.isAttached) {
+            dirtyWatch.invoke();
+          }
+        } catch (e) {
+          if (exceptionHandler) exceptionHandler(e);
+          else throw e;
         }
-      } catch (e) {
-        if (exceptionHandler) exceptionHandler(e);
-        else throw e;
+        var nextDirtyWatch = dirtyWatch._nextDirtyWatch;
+        dirtyWatch._nextDirtyWatch = null;
+        dirtyWatch = nextDirtyWatch;
       }
-      var nextDirtyWatch = dirtyWatch._nextDirtyWatch;
-      dirtyWatch._nextDirtyWatch = null;
-      dirtyWatch = nextDirtyWatch;
+    } finally {
+      this._dirtyWatchTail = null;
     }
-    this._dirtyWatchHead = this._dirtyWatchTail = null;
+
     if (processStopWatch) {
       processStopWatch.stop();
       processStopWatch.increment(count);
     }
     return count;
+  }
+
+  get isInsideInvokeDirty() {
+    return this._dirtyWatchHead === null && this._dirtyWatchTail !== null;
   }
 
   _addDirtyWatch(watch) {
