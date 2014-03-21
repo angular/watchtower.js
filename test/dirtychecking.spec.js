@@ -1,7 +1,7 @@
 import {
   GetterCache,
   DirtyCheckingChangeDetector
-} from '/base/src/dirty_checking.js';
+} from '../src/dirty_checking';
 
 describe('DirtyCheckingChangeDetector', function() {
   var getterCache, detector, setup, setupUser, user;
@@ -519,7 +519,7 @@ describe('DirtyCheckingChangeDetector', function() {
       delete map['b'];
       expect(detector.collectChanges()).toEqualMapRecord({
         map: ['a', 'd'],
-        removals: ['b[BB -> null]'] 
+        removals: ['b[BB -> null]']
       });
     });
 

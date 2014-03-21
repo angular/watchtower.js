@@ -1,6 +1,6 @@
 import {
   _WatchList
-} from './linked_list.js';
+} from './linked_list';
 
 export class Watch {
   constructor(watchGroup, record, reactionFn) {

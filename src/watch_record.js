@@ -4,11 +4,11 @@ import {
   _WatchList,
   _ArgHandlerList,
   _EvalWatchList
-} from './linked_list.js';
+} from './linked_list';
 
 import {
   Watch
-} from './watch.js';
+} from './watch';
 
 class _Handler {
   constructor(watchGrp, expression) {

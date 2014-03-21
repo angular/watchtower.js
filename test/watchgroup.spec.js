@@ -4,21 +4,21 @@ import {
   ContextReferenceAST,
   PureFunctionAST,
   ConstantAST
-} from '/base/src/ast.js';
+} from '../src/ast';
 
 import {
   GetterCache,
   DirtyCheckingChangeDetector
-} from '/base/src/dirty_checking.js';
+} from '../src/dirty_checking';
 
 import {
   WatchGroup,
   RootWatchGroup
-} from '/base/src/watch_group.js';
+} from '../src/watch_group';
 
 import {
   Logger
-} from '/base/test/helpers.js';
+} from '../test/helpers';
 
 describe('WatchGroup', function() {
   var context, watchGrp, detector, logger = new Logger;

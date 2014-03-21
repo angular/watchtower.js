@@ -1,10 +1,10 @@
 import {
   AST
-} from './ast.js';
+} from './ast';
 
 import {
   WatchRecord
-} from './change_detection.js';
+} from './change_detection';
 
 import {
   _LinkedList,
@@ -13,7 +13,7 @@ import {
   _WatchGroupList,
   _ArgHandlerList,
   _EvalWatchList
-} from './linked_list.js';
+} from './linked_list';
 
 import {
   _Handler,
@@ -23,7 +23,7 @@ import {
   _FieldHandler,
   _ArgHandler,
   _EvalWatchRecord
-} from './watch_record.js';
+} from './watch_record';
 
 function putIfAbsent(obj, key, ctor) {
   if (key in obj) return obj[key];
@@ -95,7 +95,7 @@ export class WatchGroup {
     return this._evalCost;
   }
 
-  // Stats: Number of invocation watchers (closures/methods) which are in use, including child 
+  // Stats: Number of invocation watchers (closures/methods) which are in use, including child
   // groups
   get totalEvalCost() {
     var cost = this._evalCost;
@@ -125,10 +125,10 @@ export class WatchGroup {
   //
   // In my mind, this library should be useful independent from the core Angular parser, but I am
   // not sure how to accomplish this elegantly. It seems that regardless of how this is structured,
-  // there is going to be some overhead in converting to a parse tree understood by the 
+  // there is going to be some overhead in converting to a parse tree understood by the
   // dirty-checker.
   //
-  // If anyone has any clever suggestions regarding this, please file an issue so that we can 
+  // If anyone has any clever suggestions regarding this, please file an issue so that we can
   // bike-shed this.
   watch(expression, reactionFn) {
     var watchRecord;
@@ -148,7 +148,7 @@ export class WatchGroup {
 
   // Create a new child [WatchGroup]
   //
-  // - [context] if present the child [WatchGroup] expressions will evaluate against the new 
+  // - [context] if present the child [WatchGroup] expressions will evaluate against the new
   // [context]. If not present than child expressions will evaluate on same context allowing
   // the reuse of the expression cache.
   newGroup(context) {

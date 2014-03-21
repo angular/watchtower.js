@@ -6,7 +6,7 @@ import {
   MapKeyValue,
   CollectionChangeRecord,
   CollectionChangeItem
-} from './change_detection.js';
+} from './change_detection';
 /**
  * these cannot currently be defined in the DirtyCheckingRecord class itself,
  * unfortunately. They've been moved outside and de-const-ified for this
@@ -78,7 +78,7 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
     this._recordHead._prev = null;
     this._recordTail._prev = null;
     this._recordHead = this._recordTail = null;
-    
+
     // TODO: Traceur assertions
     // assert(root._assertRecordsOk());
   }

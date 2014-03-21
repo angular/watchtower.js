@@ -1,6 +1,6 @@
 import {
   WatchRecord
-} from './change_detection.js';
+} from './change_detection';
 
 import {
   _Handler,
@@ -8,7 +8,7 @@ import {
   _InvokeHandler,
   _FieldHandler,
   _EvalWatchRecord
-} from './watch_record.js';
+} from './watch_record';
 
 function _argsList(list) {
   if (!list) list = [];
