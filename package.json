@@ -1,5 +1,5 @@
 {
-  "name": "watchtower.js",
+  "name": "watchtower",
   "version": "0.0.0",
   "description": "Change detection",
   "main": "index.js",
