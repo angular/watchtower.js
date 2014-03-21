@@ -3,6 +3,7 @@ import {
   FieldReadAST,
   ContextReferenceAST,
   PureFunctionAST,
+  MethodAST,
   ConstantAST
 } from '../src/ast';
 
@@ -419,6 +420,43 @@ describe('WatchGroup', function() {
       context.a = 2;
       expect(watchGrp.detectChanges()).not.toBe(null);
       expect(logger.toArray()).toEqual([-3]);
+    });
+
+
+    function setupRegisterDuringReaction() {
+      var fn = function(arg) {
+        logger.log(`fn(${arg})`);
+        return arg;
+      }
+      setup({'obj': {'fn': fn}, 'arg1': 'OUT', 'arg2': 'IN'});
+
+      var ast = new MethodAST(parse('obj'), 'fn', [parse('arg1')]);
+      var watch = watchGrp.watch(ast, function(v, p) {
+        var ast = new MethodAST(parse('obj'), 'fn', [parse('arg2')]);
+        watchGrp.watch(ast, function(v, p) {
+          logger.log(`reaction: ${v}`);
+        });
+      });
+    }
+
+    it('should not call functions or reacitons when registering method watches', function() {
+      setupRegisterDuringReaction();
+      expect(`${logger}`).toBe('');
+    });
+
+    it('should eval function eagerly when registered during reaction', function() {
+      setupRegisterDuringReaction();
+      watchGrp.detectChanges();
+      expect(`${logger}`).toBe('fn(OUT);fn(IN);reaction: IN');
+    });
+
+
+    it('should not call reaction functions when result of watch registered during reaction does not change', function() {
+      setupRegisterDuringReaction();
+      watchGrp.detectChanges();
+      logger.clear();
+      watchGrp.detectChanges();
+      expect(`${logger}`).toBe('fn(OUT);fn(IN)');
     });
 
 
