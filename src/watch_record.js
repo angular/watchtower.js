@@ -251,10 +251,7 @@ export class _EvalWatchRecord {
       if (haveMap && (value instanceof Map || value instanceof WeakMap)) {
         this.mode = _MODE_MAP_CLOSURE_;
       } else if (this.name) {
-        var descriptor = Object.getPropertyDescriptor(value, this.name);
-        if (typeof descriptor.value === "function") {
-          this.mode = _MODE_METHOD_;
-        }
+        this.mode = _MODE_METHOD_;
       }
     }
     /**
@@ -286,8 +283,7 @@ export class _EvalWatchRecord {
       this.dirtyArgs = false;
       break;
     case _MODE_METHOD_:
-      if (!this.dirtyArgs) return false;
-      value = this._object[this.name].apply(this._object, this.args);
+      value = methodInvoke(this._object, this.name, this.args);
       break;
     // TODO: the rest of these items don't really make sense in JS, as far as I can tell.
     // Investigate and ask about this.
@@ -333,4 +329,13 @@ export class _EvalWatchRecord {
   // static _hasMethod(mirror, symbol) {
   //   return mirror.type.instanceMembers[symbol] is MethodMirror;
   // }
+}
+
+var __no_args__ = [];
+function methodInvoke(object, method, args) {
+  if (object || object === 0 || object === false) {
+    if (typeof object[method] === "function") {
+      return object[method].apply(object, args || __no_args__);
+    }
+  }
 }
