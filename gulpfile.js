@@ -19,7 +19,7 @@ gulp.task('build:amd', function() {
     annotations: true,
     sourceMap: true
   }))
-  .pipe(gulp.dest(path.resolve(__dirname,'build/amd')));
+  .pipe(gulp.dest(path.resolve(__dirname,'dist/amd')));
 });
 
 gulp.task('build:cjs', function() {
@@ -30,11 +30,11 @@ gulp.task('build:cjs', function() {
     annotations: true,
     sourceMap: true
   }))
-  .pipe(gulp.dest(path.resolve(__dirname,'build/commonjs')));
+  .pipe(gulp.dest(path.resolve(__dirname,'dist/cjs')));
 });
 
 gulp.task('build', ['lint', 'build:amd', 'build:cjs'], function() {
-  
+
 });
 
 gulp.task('test', function(done) {
