@@ -10,6 +10,8 @@ import {
   Watch
 } from './watch';
 
+var haveMap = (typeof WeakMap === "function" && typeof Map === "function");
+
 class _Handler {
   constructor(watchGrp, expression) {
     _LinkedList._initialize(this);
@@ -245,6 +247,15 @@ export class _EvalWatchRecord {
 
     if (value === null) {
       this.mode = _MODE_NULL_;
+    } else {
+      if (haveMap && (value instanceof Map || value instanceof WeakMap)) {
+        this.mode = _MODE_MAP_CLOSURE_;
+      } else if (this.name) {
+        var descriptor = Object.getPropertyDescriptor(value, this.name);
+        if (typeof descriptor.value === "function") {
+          this.mode = _MODE_METHOD_;
+        }
+      }
     }
     /**
      * TODO(caitp): The usefulness of these blocks is yet to be discovered, but I'm sure it's out
@@ -273,6 +284,10 @@ export class _EvalWatchRecord {
       if (!this.dirtyArgs) return false;
       value = this.fn.apply(null, this.args);
       this.dirtyArgs = false;
+      break;
+    case _MODE_METHOD_:
+      if (!this.dirtyArgs) return false;
+      value = this._object[this.name].apply(this._object, this.args);
       break;
     // TODO: the rest of these items don't really make sense in JS, as far as I can tell.
     // Investigate and ask about this.
