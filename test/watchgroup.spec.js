@@ -439,6 +439,38 @@ describe('WatchGroup', function() {
       });
     }
 
+
+    it('should call methods of string primitives', function() {
+      setup({'text': 'abc'});
+      var ast = new MethodAST(parse('text'), 'toUpperCase', []);
+      watchGrp.watch(ast, logCurrentValue);
+      watchGrp.detectChanges();
+      expect(`${logger}`).toBe('ABC');
+    });
+
+
+    it('should call methods of number primitives', function() {
+      setup({num: 1.46483});
+      var ast = new MethodAST(parse('num'), 'toFixed', []);
+      watchGrp.watch(ast, logCurrentValue);
+      watchGrp.detectChanges();
+      expect(`${logger}`).toBe('1');
+    });
+
+
+    it('should not eval a function if registered during reaction', function() {
+      setup({'text': 'abc'});
+      var ast = new MethodAST(parse('text'), 'toLowerCase', []);
+      var watch = watchGrp.watch(ast, function(v, p) {
+        var ast = new MethodAST(parse('text'), 'toUpperCase', []);
+        watchGrp.watch(ast, logCurrentValue);
+      });
+
+      watchGrp.detectChanges();
+      watchGrp.detectChanges();
+      expect(`${logger}`).toBe('ABC');
+    });
+
     it('should not call functions or reacitons when registering method watches', function() {
       setupRegisterDuringReaction();
       expect(`${logger}`).toBe('');
