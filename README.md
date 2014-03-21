@@ -1,4 +1,4 @@
-#Watchtower.js [![Build Status](https://travis-ci.org/angular/watchtower.js.png?branch=master)](https://travis-ci.org/angular/watchtower.js)
+#Watchtower.js [![Build Status](https://travis-ci.org/angular/watchtower.js.svg?branch=master)](https://travis-ci.org/angular/watchtower.js)
 
 Super-fast change detection for AngularJS 2.0, based on Miško Hevery's
 [draft](https://docs.google.com/document/d/10W46qDNO8Dl0Uye3QX0oUDPYAwaPl0qNy73TVLjd1WI/edit?usp=sharing),
