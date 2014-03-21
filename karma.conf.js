@@ -37,6 +37,7 @@ module.exports = function(config) {
       array.splice(index, 1);
     }
   }
+
   if (process.argv.indexOf('--debug') >= 0) {
     arrayRemove(config.reporters, 'coverage');
     for (var key in config.preprocessors) {
