@@ -333,7 +333,7 @@ export class _EvalWatchRecord {
 
 var __no_args__ = [];
 function methodInvoke(object, method, args) {
-  if (object || object === 0 || object === false) {
+  if (object || (typeof object !== 'undefined' && object !== null)) {
     if (typeof object[method] === "function") {
       return object[method].apply(object, args || __no_args__);
     }
