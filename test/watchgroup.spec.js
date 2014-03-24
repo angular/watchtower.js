@@ -449,6 +449,36 @@ describe('WatchGroup', function() {
     });
 
 
+    it('should support calling methods on the empty string', function() {
+      setup({'text': ''});
+      var reaction = jasmine.createSpy('reaction');
+      var ast = new MethodAST(parse('text'), 'toUpperCase', []);
+      watchGrp.watch(ast, reaction);
+      watchGrp.detectChanges();
+      expect(reaction).toHaveBeenCalledWith('', undefined);
+    });
+
+
+    it('should support calling methods on the number 0', function() {
+      setup({'num': 0});
+      var reaction = jasmine.createSpy('reaction');
+      var ast = new MethodAST(parse('num'), 'toFixed', []);
+      watchGrp.watch(ast, reaction);
+      watchGrp.detectChanges();
+      expect(reaction).toHaveBeenCalledWith('0', undefined);
+    });
+
+
+    it('should support calling methods on boolean false', function() {
+      setup({'boolean': false});
+      var reaction = jasmine.createSpy('reaction');
+      var ast = new MethodAST(parse('boolean'), 'valueOf', []);
+      watchGrp.watch(ast, reaction);
+      watchGrp.detectChanges();
+      expect(reaction).toHaveBeenCalledWith(false, undefined);
+    });
+
+
     it('should call methods of number primitives', function() {
       setup({num: 1.46483});
       var ast = new MethodAST(parse('num'), 'toFixed', []);
