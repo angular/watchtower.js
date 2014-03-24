@@ -164,10 +164,10 @@ export class WatchGroup {
 
     var marker = childGroup._marker;
 
-    marker._previousEvalWatch = prev;
+    marker._prevEvalWatch = prev;
     marker._nextEvalWatch = next;
     if (prev !== null) prev._nextEvalWatch = marker;
-    if (next !== null) next._previousEvalWatch = marker;
+    if (next !== null) next._prevEvalWatch = marker;
 
     return childGroup;
   }
@@ -187,11 +187,11 @@ export class WatchGroup {
     var firstEvalWatch = this._evalWatchHead;
     var lastEvalWatch = (this._watchGroupTail === null
                       ? this : this._watchGroupTail)._evalWatchTail;
-    var prev = firstEvalWatch._previousEvalWatch;
+    var prev = firstEvalWatch._prevEvalWatch;
     var next = lastEvalWatch._nextEvalWatch;
     if (prev !== null) prev._nextEvalWatch = next;
-    if (next !== null) next._previousEvalWatch = prev;
-    this._evalWatchHead._previousEvalWatch = null;
+    if (next !== null) next._prevEvalWatch = prev;
+    this._evalWatchHead._prevEvalWatch = null;
     this._evalWatchTail._nextEvalWatch = null;
     this._evalWatchHead = this._evalWatchTail = null;
   }
@@ -205,7 +205,7 @@ export class WatchGroup {
       while (watch !== null) {
         allWatches.push(watch.toString());
         // TODO: Traceur assertions
-        // assert(watch._previousEvalWatch === prev);
+        // assert(watch._prevEvalWatch === prev);
         prev = watch;
         watch = watch._nextEvalWatch;
       }

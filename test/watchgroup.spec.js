@@ -310,6 +310,18 @@ describe('WatchGroup', function() {
       expect(logger.toArray()).toEqual(['+', 3]);
     });
 
+    it('should react when pure function return value changes in child watchGroup', function() {
+      setup();
+      var childWatchGrp = watchGrp.newGroup({'a': 1, 'b': 2});
+
+      var watch = childWatchGrp.watch(new PureFunctionAST('add', function(a, b) {
+        logger.log('+');
+        return a + b;
+      }, [parse('a'), parse('b')]), logCurrentValue);
+
+      watchGrp.detectChanges(null);
+      expect(logger.toArray()).toEqual(['+', 3]);
+    });
 
     it('should not react when pure function returns old value', function() {
       setup({'a': {'val': 1}, 'b': {'val': 2}});
