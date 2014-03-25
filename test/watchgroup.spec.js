@@ -4,8 +4,14 @@ import {
   ContextReferenceAST,
   PureFunctionAST,
   MethodAST,
-  ConstantAST
+  ConstantAST,
+  CollectionAST
 } from '../src/ast';
+
+import {
+  CollectionChangeRecord,
+  MapChangeRecord
+} from '../src/change_detection';
 
 import {
   GetterCache,
@@ -531,6 +537,145 @@ describe('WatchGroup', function() {
       logger.clear();
       watchGrp.detectChanges();
       expect(`${logger}`).toBe('fn(OUT);fn(IN)');
+    });
+
+
+    describe('filters', function() {
+      function filter(name, fn, args) {
+        if (!args[0].__filter__) args[0] = new CollectionAST(args[0]);
+        for (var i=1, ii=args.length; i<ii; ++i) {
+          if (!(args[i] instanceof AST)) args[i] = new ConstantAST(args[i]);
+        }
+        var result = new PureFunctionAST(name, filterWrapper(fn, args.length), args);
+        result.__filter__ = true;
+        return result;
+      }
+
+
+      function filterWrapper(fn, length) {
+        var args = new Array(length);
+        var values = new Array(length);
+
+        return function(...values) {
+          for (var i = 0; i < length; i++) {
+            var value = values[i];
+            var lastValue = args[i];
+
+            if (value !== lastValue) {
+             if (value instanceof CollectionChangeRecord) {
+               args[i] = value.iterable;
+             } else if (value instanceof MapChangeRecord) {
+               args[i] = value.map;
+             } else {
+               args[i] = value;
+             }
+            }
+          }
+          var value = fn(...args);
+          return value;
+        }
+      }
+
+
+      function sort(input) {
+        var clone = new Array(...input);
+        clone.sort((a,b) => { return a - b; });
+        return clone;
+      }
+
+
+      function push(input, ...value) {
+        var clone = new Array(...input);
+        clone.push(...value);
+        return clone;
+      }
+
+
+      function unshift(input, ...value) {
+        var clone = new Array(...input);
+        clone.unshift(...value);
+        return clone;
+      }
+
+
+      function cat(input, ...value) {
+        return '' + input + value.join('');
+      }
+
+
+      function add(input, value) {
+        return input + value;
+      }
+
+      it('should support object inputs', function() {
+        setup({'arr': [7, 4, 5, 6, 3, 1, 2]});
+        var ast = filter('sort', sort, [
+          filter('push', push, [
+            filter('unshift', unshift, [
+              parse('arr'),
+              11, 9, 10, 11
+            ]),
+            -1, -4, -3
+          ])
+        ]);
+
+        watchGrp.watch(ast, logCurrentValue);
+        watchGrp.detectChanges();
+        expect(logger.toArray()[0]).toEqual([-4, -3, -1, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 11]);
+      });
+
+
+      it('should run when input object is changed', function() {
+        setup({'arr': [7, 4, 5, 6, 3, 1, 2]});
+        var ast = filter('sort', sort, [
+          filter('push', push, [
+            filter('unshift', unshift, [
+              parse('arr'),
+              11, 9, 10, 11
+            ]),
+            -1, -4, -3
+          ])
+        ]);
+
+        watchGrp.watch(ast, logCurrentValue);
+        watchGrp.detectChanges();
+
+        context.arr.splice(2, 3);
+        watchGrp.detectChanges();
+        expect(logger.toArray()[1]).toEqual([-4, -3, -1, 1, 2, 4, 7, 9, 10, 11, 11]);
+      });
+
+
+      it('should support string-primitive inputs', function() {
+        // text | cat:joiner | cat:name
+        setup({'text': 'hello', 'joiner': ', ', 'name': 'caitp'});
+        var ast = filter('cat', cat, [
+          filter('cat', cat, [
+            parse('text'), parse('joiner')
+          ]), parse('name')
+        ]);
+        watchGrp.watch(ast, logCurrentValue);
+        watchGrp.detectChanges();
+        expect(`${logger}`).toBe('hello, caitp');
+      });
+
+
+      // TODO(caitp): broken... Works if not wrapped in CollectionAST
+      xit('should run when input string-primitive changes', function() {
+        // text | cat:joiner | cat:name
+        setup({'text': 'hello', 'joiner': ', ', 'name': 'caitp'});
+        var ast = filter('cat', cat, [
+          filter('cat', cat, [
+            parse('text'), parse('joiner')
+          ]), parse('name')
+        ]);
+        watchGrp.watch(ast, logCurrentValue);
+        watchGrp.detectChanges();
+        context.text = 'bye';
+        context.name += '!';
+        watchGrp.detectChanges();
+        expect(`${logger}`).toBe('hello, caitp;bye, caitp!');
+      });
     });
 
 
