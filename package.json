@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/angular/watchtower.js",
   "devDependencies": {
+    "pipe": "git://github.com/angular/pipe#remove-transitive-deps",
     "gulp": "~3.5.2",
     "karma-script-launcher": "~0.1.0",
     "karma-chrome-launcher": "~0.1.2",

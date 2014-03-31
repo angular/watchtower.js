@@ -1,41 +1,33 @@
 var gulp = require('gulp'),
+    pipe = require('pipe/gulp'),
     karma = require('./lib/gulp/karma'),
     traceur = require('gulp-traceur'),
-    jshint = require('gulp-jshint'),
-    path = require('path');
+    jshint = require('gulp-jshint');
+
+var paths = {
+  src: 'src/*.js'
+}
 
 gulp.task('lint', function() {
-  gulp.src('src/*.js')
+  gulp.src(paths.src)
   .pipe(jshint())
   .pipe(jshint.reporter('jshint-stylish'))
   .pipe(jshint.reporter('fail'));
 });
 
 gulp.task('build:amd', function() {
-  gulp.src('src/*.js')
-  .pipe(traceur({
-    modules: 'amd',
-    types: true,
-    annotations: true,
-    sourceMap: true
-  }))
-  .pipe(gulp.dest(path.resolve(__dirname,'dist/amd')));
+  gulp.src(paths.src)
+  .pipe(traceur(pipe.traceur()))
+  .pipe(gulp.dest('dist/amd'));
 });
 
 gulp.task('build:cjs', function() {
-  gulp.src('src/*.js')
-  .pipe(traceur({
-    modules: 'commonjs',
-    types: true,
-    annotations: true,
-    sourceMap: true
-  }))
-  .pipe(gulp.dest(path.resolve(__dirname,'dist/cjs')));
+  gulp.src(paths.src)
+  .pipe(traceur(pipe.traceur({modules: 'commonjs'})))
+  .pipe(gulp.dest('dist/cjs'));
 });
 
-gulp.task('build', ['lint', 'build:amd', 'build:cjs'], function() {
-
-});
+gulp.task('build', ['lint', 'build:amd', 'build:cjs']);
 
 gulp.task('test', function(done) {
   var options = {
