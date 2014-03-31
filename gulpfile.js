@@ -27,7 +27,13 @@ gulp.task('build:cjs', function() {
   .pipe(gulp.dest('dist/cjs'));
 });
 
-gulp.task('build', ['lint', 'build:amd', 'build:cjs']);
+gulp.task('build:es6', function() {
+  gulp.src(paths.src)
+  .pipe(traceur(pipe.traceur({outputLanguage: 'es6'})))
+  .pipe(gulp.dest('dist/es6'));
+});
+
+gulp.task('build', ['lint', 'build:amd', 'build:cjs', 'build:es6']);
 
 gulp.task('test', function(done) {
   var options = {
