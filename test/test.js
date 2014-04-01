@@ -18,6 +18,7 @@
     baseUrl: '/base',
 
     paths: {
+      'rtts-assert': './node_modules/rtts-assert/src/assert'
     },
 
     // Dynamically load all test files and ES6 polyfill.

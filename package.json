@@ -20,8 +20,13 @@
   },
   "homepage": "https://github.com/angular/watchtower.js",
   "devDependencies": {
-    "pipe": "git://github.com/angular/pipe#remove-transitive-deps",
+    "pipe": "angular/pipe#remove-transitive-deps",
+    "rtts-assert": "angular/assert",
     "gulp": "~3.5.2",
+    "gulp-traceur": "vojtajina/gulp-traceur#traceur-as-peer",
+    "gulp-jshint": "~1.5.0",
+    "jshint-stylish": "~0.1.5",
+    "karma": "^0.12.1",
     "karma-script-launcher": "~0.1.0",
     "karma-chrome-launcher": "~0.1.2",
     "karma-firefox-launcher": "~0.1.3",
@@ -29,12 +34,10 @@
     "karma-html2js-preprocessor": "~0.1.0",
     "karma-jasmine": "~0.1.5",
     "karma-phantomjs-launcher": "~0.1.2",
-    "karma": "~0.11.4",
-    "karma-traceur-preprocessor": "~0.2.1",
+    "karma-traceur-preprocessor": "vojtajina/karma-traceur-preprocessor#traceur-as-peer",
+    "karma-coverage": "~0.2.0",
     "es6-shim": "~0.9.3",
-    "gulp-traceur": "vojtajina/gulp-traceur#traceur-latest",
-    "gulp-jshint": "~1.5.0",
-    "jshint-stylish": "~0.1.5",
-    "karma-coverage": "~0.2.0"
+    "requirejs": "2.1.10",
+    "traceur": "vojtajina/traceur-compiler#add-es6-pure-transformer-dist"
   }
 }

@@ -2,17 +2,6 @@
 
 module.exports = function(config) {
   config.set({
-    frameworks: ['jasmine', 'requirejs', 'traceur'],
-
-    traceurPreprocessor: {
-      options: {
-        modules: 'amd',
-        types: true,
-        annotations: true,
-        sourceMap: true
-      }
-    },
-
 
     sauceLabs: {
       testName: 'AngularJS v2 - default',
@@ -67,13 +56,7 @@ module.exports = function(config) {
     },
 
 
-    browsers: ['Chrome'],
-
-
-    plugins: [
-      'karma-*'
-      // require('karma-sauce-launcher')
-    ]
+    browsers: ['Chrome']
   });
 
   if (process.env.TRAVIS) {
