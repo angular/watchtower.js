@@ -1,8 +1,6 @@
-var sharedConfig = require('./karma-shared.conf.js');
-var pipe = require('pipe/karma');
+var sharedConfig = require('pipe/karma');
 
 module.exports = function(config) {
-  pipe(config);
   sharedConfig(config);
 
   config.set({

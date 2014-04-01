@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/angular/watchtower.js",
   "devDependencies": {
-    "pipe": "angular/pipe#remove-transitive-deps",
+    "pipe": "angular/pipe#add-sauce-browsers",
     "rtts-assert": "angular/assert",
     "gulp": "~3.5.2",
     "gulp-traceur": "vojtajina/gulp-traceur#traceur-as-peer",
