@@ -6,7 +6,7 @@ var gulp = require('gulp'),
 
 var paths = {
   src: 'src/*.js'
-}
+};
 
 gulp.task('lint', function() {
   gulp.src(paths.src)
