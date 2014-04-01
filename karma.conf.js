@@ -33,6 +33,8 @@ module.exports = function(config) {
     }
   });
 
+  config.sauceLabs.startConnect = true;
+
   function arrayRemove(array, item) {
     var index = array.indexOf(item);
     if (index >= 0) {
