@@ -33,6 +33,8 @@ module.exports = function(config) {
     }
   });
 
+  config.sauceLabs.testName = 'AngularJS v2 - watchtower';
+
   function arrayRemove(array, item) {
     var index = array.indexOf(item);
     if (index >= 0) {
