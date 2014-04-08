@@ -41,7 +41,7 @@ export class WatchGroup {
     // Initialize _WatchGroupList
     this._watchGroupHead = this._watchGroupTail = null;
     this._nextWatchGroup = this._prevWatchGroup = null;
-    this.id = parentWatchGroup.id + '.' + parentWatchGroup._nextChildId++;
+    this.id = `${parentWatchGroup.id}.${parentWatchGroup._nextChildId++}`;
     this._changeDetector = changeDetector;
     this.context = context;
     this._cache = cache;
@@ -220,10 +220,10 @@ export class WatchGroup {
     }
     watches.push(watch.toString());
 
-    lines.push('WatchGroup[' + this.id + '](watches: ' + watches.join(', ') + ')');
+    lines.push(`WatchGroup[${this.id}](watches: ${watches.join(', ')})`);
     var childGroup = this._watchGroupHead;
     while (childGroup !== null) {
-      lines.push('  ' + childGroup.toString().split('\n').join('\n  '));
+      lines.push(`  ${childGroup.toString().split('\n').join('\n  ')}`);
       childGroup = childGroup._nextWatchGroup;
     }
     return lines.join("\n");

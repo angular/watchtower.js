@@ -49,7 +49,7 @@ export class ConstantAST extends AST {
   constructor(constant, expression) {
     if (arguments.length < 2) expression = null;
     super(expression === null
-        ? (typeof constant === "string" ? '"' + constant + '"' : '' + constant)
+        ? (typeof constant === "string" ? `"${constant}"` : `${constant}`)
         : expression);
     this.constant = constant;
   }
@@ -63,7 +63,7 @@ export class FieldReadAST extends AST {
   constructor(lhs, name) {
     this.lhs = lhs;
     this.name = name;
-    super(this.lhs + '.' + this.name);
+    super(`${lhs}.${name}`);
   }
 
   setupWatch(group) {
@@ -76,7 +76,7 @@ export class PureFunctionAST extends AST {
     this.fn = fn;
     this.argsAST = argsAST;
     this.name = name;
-    super(name + '(' + _argsList(argsAST) + ')');
+    super(`${name}(${_argsList(argsAST)})`);
   }
 
   setupWatch(group) {
@@ -89,7 +89,7 @@ export class MethodAST extends AST {
     this.lhsAST = lhsAST;
     this.name = name;
     this.argsAST = argsAST;
-    super(lhsAST + '.' + name + '(' + _argsList(argsAST) + ')');
+    super(`${lhsAST}.${name}(${_argsList(argsAST)})`);
   }
 
   setupWatch(group) {
@@ -100,7 +100,7 @@ export class MethodAST extends AST {
 export class CollectionAST extends AST {
   constructor(valueAST) {
     this.valueAST = valueAST;
-    super('#collection(' + valueAST + ')');
+    super(`#collection(${valueAST})`);
   }
 
   setupWatch(group) {
