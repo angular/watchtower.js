@@ -24,7 +24,7 @@
     "rtts-assert": "angular/assert",
     "gulp": "~3.5.2",
     "gulp-traceur": "vojtajina/gulp-traceur#traceur-as-peer",
-    "gulp-jshint": "~1.5.0",
+    "gulp-jshint": "~1.5.3",
     "jshint-stylish": "~0.1.5",
     "karma": "^0.12.1",
     "karma-script-launcher": "~0.1.0",
