@@ -137,7 +137,7 @@ export class _CollectionHandler extends _Handler {
 export class _ArgHandler extends _Handler {
   constructor(watchGroup, watchRecord, index) {
     // TODO(caitp): assert that watchRecord is an _EvalWatchRecord?
-    super(watchGroup, 'arg[' + index + ']');
+    super(watchGroup, `arg[${index}]`);
     this._previousArgHandler = this._nextArgHandler = null;
     this.watchRecord = watchRecord;
     this.index = index;
@@ -321,8 +321,8 @@ export class _EvalWatchRecord {
   }
 
   toString() {
-    if (this.mode === _MODE_MARKER_) return 'MARKER[' + this.currentValue + ']';
-    return '' + this.watchGrp.id + ':' + this.handler.expression;
+    if (this.mode === _MODE_MARKER_) return `MARKER[${this.currentValue}]`;
+    return `${this.watchGrp.id}:${this.handler.expression}`;
   }
 
   // TODO(caitp): worry about this later...
