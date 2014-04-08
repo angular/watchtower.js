@@ -398,7 +398,7 @@ class DirtyCheckingRecord extends ChangeRecord {
   toString() {
     // Where the heck is hashCode from?
     var hashCode = 0;
-    return _MODE_NAMES[this._mode] + '[' + this.field + ']{' + hashCode + '}';
+    return `${_MODE_NAMES[this._mode]}[${this.field}]{${hashCode}}`;
   }
 }
 class _MapChangeRecord extends MapChangeRecord {
@@ -661,7 +661,7 @@ class KeyValueRecord extends MapKeyValue {
   toString() {
     return this._previousValue === this._currentValue
           ? this._key
-          : this._key + '[' + this._previousValue + ' -> ' + this._currentValue + ']';
+          : `${this._key}[${this._previousValue} -> ${this._currentValue}]`;
   }
 }
 class _CollectionChangeRecord extends CollectionChangeRecord {
@@ -1072,8 +1072,8 @@ class ItemRecord extends CollectionChangeItem {
   }
   toString() {
     return this.previousIndex === this.currentIndex
-      ? '' + this.item
-      : this.item + '[' + this.previousIndex + ' -> ' + this.currentIndex + ']';
+      ? `${this.item}`
+      : `${this.item}[${this.previousIndex} -> ${this.currentIndex}]`;
   }
 }
 class _DuplicateItemRecordList {
