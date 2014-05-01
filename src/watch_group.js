@@ -265,6 +265,8 @@ export class WatchGroup {
     var astWR = putIfAbsent(this._cache, ast.expression, function() {
       return ast.setupWatch(that);
     });
+    // TODO: Add tests for this line!
+    astWR.handler.addForwardHandler(collectionHandler);
 
     // propagate the value from the LHS to here
     collectionHandler.acceptValue(astWR.currentValue);

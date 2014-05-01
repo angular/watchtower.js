@@ -22,6 +22,7 @@ var _MODE_GETTER_ = 3;
 var _MODE_MAP_FIELD_ = 4;
 var _MODE_ITERABLE_ = 5;
 var _MODE_MAP_ = 6;
+var _MODE_MAP_FIELD_NOTIFY_ONLY_= 10;
 export class GetterCache {
   constructor(map) {
     this._map = map;
@@ -186,9 +187,10 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
   }
 }
 export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGroup {
-  constructor(cache) {
+  constructor(cache, notifier = new ChangeNotifier()) {
     super(null, cache);
     this._fakeHead = DirtyCheckingRecord.marker();
+    this._notifier = notifier;
   }
 
   _assertRecordsOk() {
@@ -276,6 +278,47 @@ class ChangeIterator {
   }
 }
 
+// TODO: Add unit tests for this!
+export class ChangeNotifier {
+  constructor() {
+    this.objectRecords = new WeakMap();
+  }
+  notify(object) {
+    var records = this.objectRecords.get(object) || [];
+    records.forEach((record) => {
+      // TODO: Is this the correct way of manually dirty checking
+      // some records??
+      var watch = record._handler._watchHead;
+      if (watch && record.check(true)) {
+        watch._dirty = true;
+        watch.invoke();
+      }
+    });
+  }
+  isNotifyOnly(object, fieldName) {
+    return false;
+  }
+  addWatch(object, fieldName, record) {
+    var records = this.objectRecords.get(object);
+    if (!records) {
+      records = [];
+      this.objectRecords.set(object, records);
+    }
+    records.push(record);
+    return records.length;
+  }
+  removeWatch(object, fieldName, record) {
+    var records = this.objectRecords.get(object);
+    if (records) {
+      var index = records.indexOf(record);
+      if (index !== -1) {
+        records.splice(index, 1);
+      }
+    }
+    return records ? records.length : 0;
+  }
+}
+
 class DirtyCheckingRecord extends ChangeRecord {
   constructor(group, object, fieldName, getter, handler) {
     this._group = group;
@@ -307,7 +350,17 @@ class DirtyCheckingRecord extends ChangeRecord {
   get object() {
     return this._object;
   }
+  _clearObject() {
+    var notifier = this._group && this._group._root._notifier;
+    if (notifier && this._object && (
+        this._mode === _MODE_MAP_FIELD_NOTIFY_ONLY_ || this._mode === _MODE_MAP_FIELD_)
+      ) {
+      notifier.removeWatch(this._object, this._field, this);
+    }
+    this._object = null;
+  }
   set object(obj) {
+    this._clearObject(obj);
     this._object = obj;
     if (obj === null) {
       this._mode = _MODE_IDENTITY_;
@@ -333,7 +386,13 @@ class DirtyCheckingRecord extends ChangeRecord {
       return;
     }
     if (typeof obj === "object") {
-      this._mode = _MODE_MAP_FIELD_;
+      var notifier = this._group && this._group._root._notifier;
+      if (notifier && notifier.isNotifyOnly(obj, this._field)) {
+        this._mode = _MODE_MAP_FIELD_NOTIFY_ONLY_;
+      } else {
+        this._mode = _MODE_MAP_FIELD_;
+      }
+      notifier.addWatch(obj, this._field, this);
       // _instanceMirror = null; --- Reflection needed?
     } else if (this._getter !== null) {
       this._mode = _MODE_GETTER_;
@@ -343,7 +402,7 @@ class DirtyCheckingRecord extends ChangeRecord {
       // _instanceMirror = reflect(obj); --- I'm really not sure about this!
     }
   }
-  check() {
+  check(inNotify) {
     // assert(_mode != null); --- Traceur v0.0.24 missing assert()
     var current;
     switch (this._mode) {
@@ -358,6 +417,13 @@ class DirtyCheckingRecord extends ChangeRecord {
         break;
       case _MODE_GETTER_:
         current = this._getter(this.object);
+        break;
+      case _MODE_MAP_FIELD_NOTIFY_ONLY_:
+        if (inNotify) {
+          current = this.object[this.field];
+        } else {
+          return false;
+        }
         break;
       case _MODE_MAP_FIELD_:
         if (!this.object) return undefined;
@@ -395,6 +461,9 @@ class DirtyCheckingRecord extends ChangeRecord {
     return false;
   }
   remove() {
+    // TODO: This is not called when a WatchGroup is destroyed.
+    // TODO: Should also be called when a parent WatchGroup is destroyed!
+    this._clearObject();
     this._group._recordRemove(this);
   }
   toString() {
