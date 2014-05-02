@@ -353,12 +353,14 @@ class DirtyCheckingRecord extends ChangeRecord {
         // I'm not sure how much support for Reflection is available in Traceur
         // just yet, but I will look into this later...
         // current = _instanceMirror.getField(_symbol).reflectee;
+        if (!this.object) return undefined;
         current = this.object[this.field];
         break;
       case _MODE_GETTER_:
         current = this._getter(this.object);
         break;
       case _MODE_MAP_FIELD_:
+        if (!this.object) return undefined;
         current = this.object[this.field];
         break;
       case _MODE_IDENTITY_:

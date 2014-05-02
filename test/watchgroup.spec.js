@@ -540,6 +540,30 @@ describe('WatchGroup', function() {
     });
 
 
+    it('should not throw watching child property of undefined', function() {
+      setup({});
+      expect(function() {
+        watchGrp.watch(parse('a.b'), logCurrentValue);
+        watchGrp.detectChanges();
+      }).not.toThrow();
+    });
+
+
+    it('should evaluate listener when child of previously undefined object changes', function() {
+      setup({});
+      watchGrp.watch(parse('a.b'), logCurrentValue);
+      watchGrp.detectChanges();
+
+      context.a = {};
+      context.a.b = "Hello";
+      watchGrp.detectChanges();
+      context.a.b = "World";
+      watchGrp.detectChanges();
+
+      expect(`${logger}`).toBe(";Hello;World");
+    });
+
+
     describe('filters', function() {
       function filter(name, fn, args) {
         if (!args[0].__filter__) args[0] = new CollectionAST(args[0]);
