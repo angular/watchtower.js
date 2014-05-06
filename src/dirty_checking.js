@@ -22,7 +22,9 @@ var _MODE_GETTER_ = 3;
 var _MODE_MAP_FIELD_ = 4;
 var _MODE_ITERABLE_ = 5;
 var _MODE_MAP_ = 6;
-var _MODE_MAP_FIELD_NOTIFY_ONLY_= 10;
+var _NOT_NOTIFIED_= 10;
+var _NOTIFIED_= 11;
+
 export class GetterCache {
   constructor(map) {
     this._map = map;
@@ -31,6 +33,7 @@ export class GetterCache {
     return this._map[field] || null;
   }
 }
+
 export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
   constructor(parent, cache) {
     this._parent = parent;
@@ -186,11 +189,16 @@ export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
     return lines.join('\n');
   }
 }
+
 export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGroup {
-  constructor(cache, notifier = new ChangeNotifier()) {
+  constructor(cache, observerSelector=null) {
     super(null, cache);
     this._fakeHead = DirtyCheckingRecord.marker();
-    this._notifier = notifier;
+    this._observerSelector = observerSelector || { getObserver(){ return null; } };
+  }
+
+  getObserver(obj, field){
+    return this._observerSelector.getObserver(obj, field);
   }
 
   _assertRecordsOk() {
@@ -278,47 +286,6 @@ class ChangeIterator {
   }
 }
 
-// TODO: Add unit tests for this!
-export class ChangeNotifier {
-  constructor() {
-    this.objectRecords = new WeakMap();
-  }
-  notify(object) {
-    var records = this.objectRecords.get(object) || [];
-    records.forEach((record) => {
-      // TODO: Is this the correct way of manually dirty checking
-      // some records??
-      var watch = record._handler._watchHead;
-      if (watch && record.check(true)) {
-        watch._dirty = true;
-        watch.invoke();
-      }
-    });
-  }
-  isNotifyOnly(object, fieldName) {
-    return false;
-  }
-  addWatch(object, fieldName, record) {
-    var records = this.objectRecords.get(object);
-    if (!records) {
-      records = [];
-      this.objectRecords.set(object, records);
-    }
-    records.push(record);
-    return records.length;
-  }
-  removeWatch(object, fieldName, record) {
-    var records = this.objectRecords.get(object);
-    if (records) {
-      var index = records.indexOf(record);
-      if (index !== -1) {
-        records.splice(index, 1);
-      }
-    }
-    return records ? records.length : 0;
-  }
-}
-
 class DirtyCheckingRecord extends ChangeRecord {
   constructor(group, object, fieldName, getter, handler) {
     this._group = group;
@@ -351,21 +318,22 @@ class DirtyCheckingRecord extends ChangeRecord {
     return this._object;
   }
   _clearObject() {
-    var notifier = this._group && this._group._root._notifier;
-    if (notifier && this._object && (
-        this._mode === _MODE_MAP_FIELD_NOTIFY_ONLY_ || this._mode === _MODE_MAP_FIELD_)
-      ) {
-      notifier.removeWatch(this._object, this._field, this);
+    if(this._observer){
+      this._observer.close();
+      this._observer = null;
     }
+
     this._object = null;
   }
   set object(obj) {
     this._clearObject(obj);
     this._object = obj;
+
     if (obj === null) {
       this._mode = _MODE_IDENTITY_;
       return;
     }
+
     if (this.field === null) {
       // _instanceMirror = null; --- Again, do we need reflection?
       if (typeof obj === "object") {
@@ -385,28 +353,32 @@ class DirtyCheckingRecord extends ChangeRecord {
       }
       return;
     }
-    if (typeof obj === "object") {
-      var notifier = this._group && this._group._root._notifier;
-      if (notifier && notifier.isNotifyOnly(obj, this._field)) {
-        this._mode = _MODE_MAP_FIELD_NOTIFY_ONLY_;
-      } else {
-        this._mode = _MODE_MAP_FIELD_;
-      }
-      notifier.addWatch(obj, this._field, this);
-      // _instanceMirror = null; --- Reflection needed?
-    } else if (this._getter !== null) {
+
+    this._observer = this._group && this._group._root.getObserver(obj, this._field);
+      
+    if(this._observer){
+      this._mode = _NOTIFIED_;
+      this.newValue = this._observer.open((value) =>{
+        this.newValue = value;
+        this._mode = _NOTIFIED_;
+      });
+    }else if(this._getter !== null){
       this._mode = _MODE_GETTER_;
-      // _instanceMirror = null; --- Reflection needed?
-    } else {
-      this._mode = _MODE_REFLECT_;
-      // _instanceMirror = reflect(obj); --- I'm really not sure about this!
+    }else{
+      this._mode = _MODE_MAP_FIELD_;
     }
   }
-  check(inNotify) {
+  check() {
     // assert(_mode != null); --- Traceur v0.0.24 missing assert()
     var current;
     switch (this._mode) {
-      case _MODE_MARKER_: return false;
+      case _NOT_NOTIFIED_:
+      case _MODE_MARKER_: 
+        return false;
+      case _NOTIFIED_:
+        current = this.newValue;
+        this._mode = _NOT_NOTIFIED_;
+        break;
       case _MODE_REFLECT_:
         // TODO:
         // I'm not sure how much support for Reflection is available in Traceur
@@ -417,14 +389,7 @@ class DirtyCheckingRecord extends ChangeRecord {
         break;
       case _MODE_GETTER_:
         current = this._getter(this.object);
-        break;
-      case _MODE_MAP_FIELD_NOTIFY_ONLY_:
-        if (inNotify) {
-          current = this.object[this.field];
-        } else {
-          return false;
-        }
-        break;
+        break;   
       case _MODE_MAP_FIELD_:
         if (!this.object) return undefined;
         current = this.object[this.field];
@@ -439,6 +404,7 @@ class DirtyCheckingRecord extends ChangeRecord {
         throw "UNREACHABLE";
         // assert(false); --- Traceur 0.0.24 missing assert()
     }
+
     var last = this.currentValue;
     if (last !== current) {
       // TODO:
@@ -458,6 +424,7 @@ class DirtyCheckingRecord extends ChangeRecord {
         return true;
       }
     }
+
     return false;
   }
   remove() {
