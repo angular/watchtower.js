@@ -3,10 +3,6 @@ import {
 } from './ast';
 
 import {
-  WatchRecord
-} from './change_detection';
-
-import {
   _LinkedList,
   _LinkedListItem,
   _WatchList,

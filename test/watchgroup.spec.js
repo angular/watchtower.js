@@ -9,13 +9,10 @@ import {
 } from '../src/ast';
 
 import {
+  GetterCache,
+  DirtyCheckingChangeDetector,
   CollectionChangeRecord,
   MapChangeRecord
-} from '../src/change_detection';
-
-import {
-  GetterCache,
-  DirtyCheckingChangeDetector
 } from '../src/dirty_checking';
 
 import {

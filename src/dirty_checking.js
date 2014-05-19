@@ -1,12 +1,3 @@
-import {
-  ChangeDetector,
-  ChangeDetectorGroup,
-  ChangeRecord,
-  MapChangeRecord,
-  MapKeyValue,
-  CollectionChangeRecord,
-  CollectionChangeItem
-} from './change_detection';
 /**
  * these cannot currently be defined in the DirtyCheckingRecord class itself,
  * unfortunately. They've been moved outside and de-const-ified for this
@@ -15,6 +6,7 @@ import {
 var _MODE_NAMES = [
   'MARKER', 'IDENT', 'REFLECT', 'GETTER', 'MAP[]', 'ITERABLE', 'MAP'
 ];
+
 var _MODE_MARKER_ = 0;
 var _MODE_IDENTITY_ = 1;
 var _MODE_REFLECT_ = 2;
@@ -34,7 +26,7 @@ export class GetterCache {
   }
 }
 
-export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
+export class DirtyCheckingChangeDetectorGroup {
   constructor(parent, cache) {
     this._parent = parent;
     this._getterCache = cache;
@@ -286,7 +278,7 @@ class ChangeIterator {
   }
 }
 
-class DirtyCheckingRecord extends ChangeRecord {
+class DirtyCheckingRecord {
   constructor(group, object, fieldName, getter, handler) {
     this._group = group;
     this._getter = getter;
@@ -341,12 +333,12 @@ class DirtyCheckingRecord extends ChangeRecord {
           if (this._mode !== _MODE_ITERABLE_) {
             // Last one was collection as well, don't reset state.
             this._mode = _MODE_ITERABLE_;
-            this.currentValue = new _CollectionChangeRecord();
+            this.currentValue = new CollectionChangeRecord();
           }
         } else if (this._mode !== _MODE_MAP_) {
           // Last one was collection as well, don't reset state.
           this._mode = _MODE_MAP_;
-          this.currentValue = new _MapChangeRecord();
+          this.currentValue = new MapChangeRecord();
         }
       } else {
         this._mode = _MODE_IDENTITY_;
@@ -439,7 +431,8 @@ class DirtyCheckingRecord extends ChangeRecord {
     return `${_MODE_NAMES[this._mode]}[${this.field}]{${hashCode}}`;
   }
 }
-class _MapChangeRecord extends MapChangeRecord {
+
+export class MapChangeRecord {
   constructor() {
     this._records = {}; // WeakMap perhaps?
     this._map = {};
@@ -668,7 +661,8 @@ class _MapChangeRecord extends MapChangeRecord {
     }
   }
 }
-class KeyValueRecord extends MapKeyValue {
+
+class KeyValueRecord {
   constructor(key) {
     this._key = key;
     this._previousValue = this._currentValue = null;
@@ -702,7 +696,8 @@ class KeyValueRecord extends MapKeyValue {
           : `${this._key}[${this._previousValue} -> ${this._currentValue}]`;
   }
 }
-class _CollectionChangeRecord extends CollectionChangeRecord {
+
+export class CollectionChangeRecord {
   constructor() {
     this._iterable = null;
     this._items = new DuplicateMap();
@@ -827,7 +822,7 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
     // assert(isDirty == false);
   }
   /**
-   * A [_CollectionChangeRecord] is considered dirty if it has additions, moves
+   * A [CollectionChangeRecord] is considered dirty if it has additions, moves
    * or removals.
    */
   get isDirty() {
@@ -1087,7 +1082,8 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
            "removals: " + removals.join(', ') + "\n";
   }
 }
-class ItemRecord extends CollectionChangeItem {
+
+class ItemRecord {
   constructor(item) {
     this.item = item;
     this.previousIndex = this.currentIndex = null;
@@ -1114,6 +1110,7 @@ class ItemRecord extends CollectionChangeItem {
       : `${this.item}[${this.previousIndex} -> ${this.currentIndex}]`;
   }
 }
+
 class _DuplicateItemRecordList {
   constructor() {
     this.head = this.tail = null;
@@ -1184,6 +1181,7 @@ class _DuplicateItemRecordList {
     return this.head === null;
   }
 }
+
 class DuplicateMap {
   constructor() {
     // For an identical behaviour to the Dart implementation, a Map or WeakMap is required. However,
