@@ -1,8 +1,4 @@
 import {
-  WatchRecord
-} from './change_detection';
-
-import {
   _Handler,
   _ConstantHandler,
   _InvokeHandler,
@@ -108,7 +104,7 @@ export class CollectionAST extends AST {
   }
 }
 
-class _ConstantWatchRecord extends WatchRecord {
+class _ConstantWatchRecord {
   constructor(watchGroup, expression, currentValue) {
     this.currentValue = currentValue;
     this.handler = new _ConstantHandler(watchGroup, expression, currentValue);
