@@ -1,11 +1,17 @@
 import {
-  GetterCache,
-  DirtyCheckingChangeDetector,
-  DirtyCheckingChangeDetectorGroup
+  GetterCache
+} from '../src/dirty_checking';
+
+import {
+  RootWatchGroup
+} from '../src/watch_group';
+
+import {
+  GetterCache
 } from '../src/dirty_checking';
 
 describe('observer', function() {
-  var getterCache, detector, setup, setupUser, selector;
+  var getterCache, watchGrp, setup, selector;
 
   beforeEach(function() {
     setup = function(observer) {
@@ -14,7 +20,7 @@ describe('observer', function() {
       });
 
       selector = new ExplicitObserverSelector(observer);
-      detector = new DirtyCheckingChangeDetector(getterCache, selector);
+      watchGrp = new RootWatchGroup(getterCache, selector);
     }
   });
 
@@ -24,7 +30,7 @@ describe('observer', function() {
           user = new _User('Rob');
 
       setup(observer);
-      detector.watch(user, 'name', null);
+      watchGrp.watchField(user, 'name', null);
 
       expect(selector.lastObj).toBe(user);
     });
@@ -34,7 +40,7 @@ describe('observer', function() {
           user = new _User('Rob');
 
       setup(observer);
-      detector.watch(user, 'name', null);
+      watchGrp.watchField(user, 'name', null);
 
       expect(selector.lastField).toBe('name');
     });
@@ -44,7 +50,7 @@ describe('observer', function() {
           user = new _User('Rob');
 
       setup(observer);
-      detector.watch(user, 'name', null);
+      watchGrp.watchField(user, 'name', null);
 
       expect(selector.observersReturned).toBe(1);
     });
@@ -53,7 +59,7 @@ describe('observer', function() {
       var user = new _User('Rob');
 
       setup(null);
-      detector.watch(user, 'name', null);
+      watchGrp.watchField(user, 'name', null);
 
       expect(selector.observersReturned).toBe(1);
     });
@@ -65,7 +71,7 @@ describe('observer', function() {
           user = new _User('Rob');
 
       setup(observer);
-      detector.watch(user, 'name', null);
+      watchGrp.watchField(user, 'name', null);
 
       expect(observer.openCalls).toBe(1);
     });
@@ -75,7 +81,7 @@ describe('observer', function() {
           user = new _User('Rob');
 
       setup(observer);
-      detector.watch(user, 'name', null);
+      watchGrp.watchField(user, 'name', null);
 
       expect(observer.callback).not.toBe(null);
     });
@@ -85,9 +91,9 @@ describe('observer', function() {
           user = new _User('Rob');
 
       setup(observer);
-      detector.watch(user, 'name', null);
+      watchGrp.watchField(user, 'name', null);
 
-      var changes = detector.collectChanges();
+      var changes = watchGrp.collectChanges();
       expect(changes.iterate()).toBe(true);
     });
 
@@ -96,17 +102,17 @@ describe('observer', function() {
           user = new _User('Rob');
 
       setup(observer);
-      detector.watch(user, 'name', null);
+      watchGrp.watchField(user, 'name', null);
 
-      var changes = detector.collectChanges();
+      var changes = watchGrp.collectChanges();
       expect(changes.iterate()).toBe(true);
 
-      changes = detector.collectChanges();
+      changes = watchGrp.collectChanges();
       expect(changes.iterate()).toBe(false);
 
       observer.notify('Eisenberg');
 
-      changes = detector.collectChanges();
+      changes = watchGrp.collectChanges();
       expect(changes.iterate()).toBe(true);
     });
 
@@ -117,8 +123,8 @@ describe('observer', function() {
           group;
 
       setup(observer);
-      group = detector.newGroup();
-      group.watch(user, 'name', null);
+      group = watchGrp.newGroup();
+      group.watchField(user, 'name', null);
 
       expect(observer.closeCalls).toBe(0);
       group.remove();
