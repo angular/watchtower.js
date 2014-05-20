@@ -66,7 +66,7 @@ class _Handler {
 
   _releaseWatch() {
     this.watchRecord.remove();
-    this.watchGrp._fieldCost--;
+    this.watchGrp.fieldCost--;
   }
 
   acceptValue(object) {
@@ -226,12 +226,6 @@ export class _EvalWatchRecord {
     return record;
   }
 
-  get field() {
-    // TODO(caitp): does this look right for javascript? Some other representation might make more
-    // sense.
-    return '()';
-  }
-
   get object() {
     return this._object;
   }
@@ -254,6 +248,7 @@ export class _EvalWatchRecord {
         this.mode = _MODE_METHOD_;
       }
     }
+    
     /**
      * TODO(caitp): The usefulness of these blocks is yet to be discovered, but I'm sure it's out
      * there somewhere.
@@ -273,6 +268,7 @@ export class _EvalWatchRecord {
 
   check() {
     var value;
+
     switch (this.mode) {
     case _MODE_MARKER_:
     case _MODE_NULL_:
@@ -292,6 +288,7 @@ export class _EvalWatchRecord {
     }
 
     var current = this.currentValue;
+
     if (current !== value) {
       if (current !== current && value !== value) {
         // Ignore, it appears to be a NaN -> NaN change.
@@ -303,20 +300,15 @@ export class _EvalWatchRecord {
         return true;
       }
     }
-    return false;
-  }
 
-  get nextChange() {
-    // TODO(caitp): Investigate this, it doesn't seem to make a lot of sense. Is this because it
-    // lives in the evalWatchList rather than a different sort of list?
-    return null;
+    return false;
   }
 
   remove() {
     // TODO(caitp): Traceur assertions
     // assert(this.mode !== _MODE_DELETED_);
     this.mode = _MODE_DELETED_;
-    this.watchGrp._evalCost--;
+    this.watchGrp.evalCost--;
     _EvalWatchList._remove(this.watchGrp, this);
   }
 
