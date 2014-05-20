@@ -22,8 +22,8 @@ import {
 } from './watch_record';
 
 import {
-  DirtyCheckingRecord,
-  ChangeIterator
+  ChangeRecord,
+  ChangeRecordIterator
 } from './dirty_checking';
 
 function putIfAbsent(obj, key, ctor) {
@@ -53,62 +53,53 @@ export class WatchGroup {
     this._marker.watchGrp = this;
     this._evalWatchHead = this._evalWatchTail = this._marker;
 
-    this._dirtyMarker = DirtyCheckingRecord.marker();
+    this._dirtyMarker = ChangeRecord.marker();
     this._recordTail = this._parentWatchGroup._childInclRecordTail;
     this._recordHead = this._recordTail = this._recordAdd(this._dirtyMarker);
 
     // Stats...
-    this._fieldCost = 0;
-    this._collectionCost = 0;
-    this._evalCost = 0;
-  }
-
-  // Stats: Number of field watchers which are in use
-  get fieldCost() {
-    return this._fieldCost;
+    this.fieldCost = 0; // Stats: Number of field watchers which are in use
+    this.collectionCost = 0; // Stats: Number of collection watchers which are in use
+    this.evalCost = 0; // Stats: Number of invocation watchers (closures/methods) which are in use
   }
 
   // Stats: Number of field watchers which are in use including child groups
   get totalFieldCost() {
-    var cost = this._fieldCost;
+    var cost = this.fieldCost;
     var group = this._watchGroupHead;
+
     while (group !== null) {
       cost += group.totalFieldCost;
       group = group._nextWatchGroup;
     }
-    return cost;
-  }
 
-  // Stats: Number of collection watchers which are in use
-  get collectionCost() {
-    return this._collectionCost;
+    return cost;
   }
 
   // Stats: Number of collection watchers which are in use including child groups
   get totalCollectionCost() {
-    var cost = this._collectionCost;
+    var cost = this.collectionCost;
     var group = this._watchGroupHead;
+
     while (group !== null) {
       cost += group.totalCollectionCost;
       group = group._nextWatchGroup;
     }
-    return cost;
-  }
 
-  // Stats: Number of invocation watchers (closures/methods) which are in use
-  get evalCost() {
-    return this._evalCost;
+    return cost;
   }
 
   // Stats: Number of invocation watchers (closures/methods) which are in use, including child
   // groups
   get totalEvalCost() {
-    var cost = this._evalCost;
+    var cost = this.evalCost;
     var group = this._watchGroupHead;
+
     while (group !== null) {
       cost += group.totalEvalCost;
       group = group._nextWatchGroup;
     }
+
     return cost;
   }
 
@@ -124,7 +115,7 @@ export class WatchGroup {
 
       if (cursor === end) break;
 
-      cursor = cursor._nextRecord;
+      cursor = cursor.nextRecord;
     }
 
     return count;
@@ -205,6 +196,7 @@ export class WatchGroup {
 
     marker._prevEvalWatch = prev;
     marker._nextEvalWatch = next;
+
     if (prev !== null) prev._nextEvalWatch = marker;
     if (next !== null) next._prevEvalWatch = marker;
 
@@ -216,11 +208,11 @@ export class WatchGroup {
     // TODO:(misko) This code is not right.
     // 1) It fails to release [ChangeDetector] [WatchRecord]s
 
-    var prevRecord = this._recordHead._prevRecord;
-    var nextRecord = this._childInclRecordTail._nextRecord;
+    var prevRecord = this._recordHead.prevRecord;
+    var nextRecord = this._childInclRecordTail.nextRecord;
 
-    if (prevRecord !== null) prevRecord._nextRecord = nextRecord;
-    if (nextRecord !== null) nextRecord._prevRecord = prevRecord;
+    if (prevRecord !== null) prevRecord.nextRecord = nextRecord;
+    if (nextRecord !== null) nextRecord.prevRecord = prevRecord;
 
     this._recordHead._prevWatchGroup = null;
     this._recordTail._prevWatchGroup = null;
@@ -237,7 +229,9 @@ export class WatchGroup {
 
     // Unlink the _watchRecord
     var firstEvalWatch = this._evalWatchHead;
-    var lastEvalWatch = (this._watchGroupTail === null ? this : this._watchGroupTail)._evalWatchTail;
+    var lastEvalWatch = (this._watchGroupTail === null 
+      ? this 
+      : this._watchGroupTail)._evalWatchTail;
 
     var prev = firstEvalWatch._prevEvalWatch;
     var next = lastEvalWatch._nextEvalWatch;
@@ -298,7 +292,7 @@ export class WatchGroup {
 
     // Create a ChangeRecord for the current field and assign the change record to the handler.
     var watchRecord = this.watchField(null, name, fieldHandler);
-    this._fieldCost++;
+    this.fieldCost++;
     fieldHandler.watchRecord = watchRecord;
 
     var lhsWR = putIfAbsent(this._cache, lhs.expression, function() {
@@ -318,7 +312,7 @@ export class WatchGroup {
     var that = this;
     var collectionHandler = new _CollectionHandler(this, ast.expression);
     var watchRecord = this.watchField(null, null, collectionHandler);
-    this._collectionCost++;
+    this.collectionCost++;
     collectionHandler.watchRecord = watchRecord;
 
     // We set a field forwarding handler on LHS. This will allow the change objects to propagate to
@@ -370,7 +364,7 @@ export class WatchGroup {
 
     // Must be done last
     _EvalWatchList._add(this, evalWatchRecord);
-    this._evalCost++;
+    this.evalCost++;
 
     if (this._rootGroup.isInsideInvokeDirty) {
       // This check means that we are inside invoke reaction function.
@@ -385,18 +379,18 @@ export class WatchGroup {
 
   watchField(context, field, handler){
     var getter = field === null ? null : this._getterCache.get(field);
-    return this._recordAdd(new DirtyCheckingRecord(this, context, field, getter, handler));
+    return this._recordAdd(new ChangeRecord(this, context, field, getter, handler));
   }
 
   _recordAdd(record) {
     var previous = this._recordTail,
-        next = previous === null ? null : previous._nextRecord;
+        next = previous === null ? null : previous.nextRecord;
 
-    record._nextRecord = next;
-    record._prevRecord = previous;
+    record.nextRecord = next;
+    record.prevRecord = previous;
 
-    if (previous !== null) previous._nextRecord = record;
-    if (next !== null) next._prevRecord = record;
+    if (previous !== null) previous.nextRecord = record;
+    if (next !== null) next.prevRecord = record;
 
     this._recordTail = record;
 
@@ -406,22 +400,22 @@ export class WatchGroup {
   }
 
   _recordRemove(record) {
-    var previous = record._prevRecord,
-        next = record._nextRecord;
+    var previous = record.prevRecord,
+        next = record.nextRecord;
 
     if (record === this._recordHead && record === this._recordTail) {
       // we are the last one, must leave marker behind.
       this._recordHead = this._recordTail = this._dirtyMarker;
-      this._dirtyMarker._nextRecord = next;
-      this._dirtyMarker._prevRecord = previous;
+      this._dirtyMarker.nextRecord = next;
+      this._dirtyMarker.prevRecord = previous;
 
-      if (previous !== null) previous._nextRecord = this._dirtyMarker;
-      if (next !== null) next._prevRecord = this._dirtyMarker;
+      if (previous !== null) previous.nextRecord = this._dirtyMarker;
+      if (next !== null) next.prevRecord = this._dirtyMarker;
     } else {
       if (record === this._recordTail) this._recordTail = previous;
       if (record === this._recordHead) this._recordHead = next;
-      if (previous !== null) previous._nextRecord = next;
-      if (next !== null) next._prevRecord = previous;
+      if (previous !== null) previous.nextRecord = next;
+      if (next !== null) next.prevRecord = previous;
     }
   }
 }
@@ -448,18 +442,16 @@ export class RootWatchGroup extends WatchGroup {
     this._evalWatchHead = this._evalWatchTail = this._marker;
     this._dirtyWatchHead = this._dirtyWatchTail = null;
 
-    this._fakeHead = DirtyCheckingRecord.marker();
-    this._dirtyMarker = DirtyCheckingRecord.marker();
+    this._fakeHead = ChangeRecord.marker();
+    this._dirtyMarker = ChangeRecord.marker();
     this._recordHead = this._recordTail = this._dirtyMarker;
 
     // Stats...
-    this._fieldCost = 0;
-    this._collectionCost = 0;
-    this._evalCost = 0;
-  }
+    this.fieldCost = 0;
+    this.collectionCost = 0;
+    this.evalCost = 0;
 
-  get _rootGroup() {
-    return this;
+    this._rootGroup = this;
   }
 
   getObserver(obj, field){
@@ -506,7 +498,11 @@ export class RootWatchGroup extends WatchGroup {
         ++evalCount;
 
         if (evalRecord.check() && changeLog){
-          changeLog(evalRecord.handler.expression, evalRecord.currentValue, evalRecord.previousValue);
+          changeLog(
+            evalRecord.handler.expression, 
+            evalRecord.currentValue, 
+            evalRecord.previousValue
+            );
         }
       } catch (e) {
         if (exceptionHandler) exceptionHandler(e);
@@ -562,6 +558,43 @@ export class RootWatchGroup extends WatchGroup {
     return count;
   }
 
+  collectChanges(exceptionHandler, stopwatch){
+    if (stopwatch) {
+      stopwatch.start();
+    }
+
+    var changeTail = this._fakeHead,
+        current = this._recordHead,
+        count = 0;
+
+    while (current !== null) {
+      try {
+        if (current.check()) {
+          changeTail = changeTail.nextChange = current;
+        }
+
+        ++count;
+      } catch (e) {
+        if (exceptionHandler)  exceptionHandler(e);
+        else throw e;
+      }
+
+      current = current.nextRecord;
+    }
+
+    changeTail.nextChange = null;
+
+    if (stopwatch) {
+      stopwatch.stop();
+      stopwatch.increment(count);
+    }
+
+    var changeHead = this._fakeHead.nextChange;
+    this._fakeHead.nextChange = null;
+
+    return new ChangeRecordIterator(changeHead);
+  }
+
   get isInsideInvokeDirty() {
     return this._dirtyWatchHead === null && this._dirtyWatchTail !== null;
   }
@@ -581,42 +614,5 @@ export class RootWatchGroup extends WatchGroup {
     }
 
     return watch;
-  }
-
-  collectChanges(exceptionHandler, stopwatch){
-    if (stopwatch) {
-      stopwatch.start();
-    }
-
-    var changeTail = this._fakeHead,
-        current = this._recordHead,
-        count = 0;
-
-    while (current !== null) {
-      try {
-        if (current.check()) {
-          changeTail = changeTail._nextChange = current;
-        }
-
-        ++count;
-      } catch (e) {
-        if (exceptionHandler)  exceptionHandler(e);
-        else throw e;
-      }
-
-      current = current._nextRecord;
-    }
-
-    changeTail._nextChange = null;
-
-    if (stopwatch) {
-      stopwatch.stop();
-      stopwatch.increment(count);
-    }
-
-    var changeHead = this._fakeHead._nextChange;
-    this._fakeHead._nextChange = null;
-
-    return new ChangeIterator(changeHead);
   }
 }

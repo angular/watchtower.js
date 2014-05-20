@@ -65,10 +65,10 @@ function changeIteratorToCollectionChanges(it) {
 
   if (it.iterate()) {
     var record = it.current.currentValue;
-    changes.collection = linkedListToArray(record._collectionHead, '_nextRec', serialize);
-    changes.additions = linkedListToArray(record._additionsHead, '_nextAddedRec', serialize);
-    changes.removals = linkedListToArray(record._removalsHead, '_nextRemovedRec', serialize);
-    changes.moves = linkedListToArray(record._movesHead, '_nextMovedRec', serialize);
+    changes.collection = linkedListToArray(record.collectionHead, 'nextRec', serialize);
+    changes.additions = linkedListToArray(record.additionsHead, 'nextAddedRec', serialize);
+    changes.removals = linkedListToArray(record.removalsHead, 'nextRemovedRec', serialize);
+    changes.moves = linkedListToArray(record.movesHead, 'nextMovedRec', serialize);
   }
 
   return changes;
@@ -88,10 +88,10 @@ function changeIteratorToMapChanges(it) {
 
   if (it.iterate()) {
     var record = it.current.currentValue;
-    changes.map = linkedListToArray(record._mapHead, '_nextKeyValue', serialize);
-    changes.additions = linkedListToArray(record._additionsHead, '_nextAddedKeyValue', serialize);
-    changes.removals = linkedListToArray(record._removalsHead, '_nextRemovedKeyValue', serialize);
-    changes.changes = linkedListToArray(record._changesHead, '_nextChangedKeyValue', serialize);
+    changes.map = linkedListToArray(record.mapHead, 'nextKeyValue', serialize);
+    changes.additions = linkedListToArray(record.additionsHead, 'nextAddedKeyValue', serialize);
+    changes.removals = linkedListToArray(record.removalsHead, 'nextRemovedKeyValue', serialize);
+    changes.changes = linkedListToArray(record.changesHead, 'nextChangedKeyValue', serialize);
   }
 
   return changes;
