@@ -10,7 +10,6 @@ import {
 
 import {
   GetterCache,
-  DirtyCheckingChangeDetector,
   CollectionChangeRecord,
   MapChangeRecord
 } from '../src/dirty_checking';
@@ -25,7 +24,7 @@ import {
 } from '../test/helpers';
 
 describe('WatchGroup', function() {
-  var context, watchGrp, detector, logger = new Logger;
+  var context, watchGrp, logger = new Logger;
 
   function parse(expression) {
     var currentAST = new ContextReferenceAST();
@@ -37,8 +36,7 @@ describe('WatchGroup', function() {
 
   function setup(ctx={}) {
     context = ctx;
-    detector = new DirtyCheckingChangeDetector(new GetterCache({}));
-    watchGrp = new RootWatchGroup(detector, context);
+    watchGrp = new RootWatchGroup(new GetterCache({}), null, context);
   }
 
   // reaction function to log the current value
@@ -62,11 +60,11 @@ describe('WatchGroup', function() {
     it('should prevent reaction fn on removed', function() {
       setup({'a': 'hello'});
       var watch;
-      watchGrp.watch(parse('a'), function(v, p) {
+      watchGrp.watchExpression(parse('a'), function(v, p) {
         logger.log('removed');
         watch.remove();
       });
-      watch = watchGrp.watch(parse('a'), logCurrentValue);
+      watch = watchGrp.watchExpression(parse('a'), logCurrentValue);
       watchGrp.detectChanges();
       expect(`${logger}`).toEqual('removed');
     });
@@ -79,7 +77,7 @@ describe('WatchGroup', function() {
 
       // should fire on initial adding
       expect(watchGrp.fieldCost).toBe(0);
-      var watch = watchGrp.watch(parse('a'), logCurrentValue);
+      var watch = watchGrp.watchExpression(parse('a'), logCurrentValue);
       expect(watch.expression).toBe('a');
       expect(watchGrp.fieldCost).toBe(1);
       watchGrp.detectChanges();
@@ -89,7 +87,7 @@ describe('WatchGroup', function() {
 
     it('should not log changes on extra detectChanges', function() {
       setup({'a': 'hello'});
-      var watch = watchGrp.watch(parse('a'), logCurrentValue);
+      var watch = watchGrp.watchExpression(parse('a'), logCurrentValue);
       watchGrp.detectChanges();
       watchGrp.detectChanges();
       expect(`${logger}`).toBe('hello');
@@ -98,7 +96,7 @@ describe('WatchGroup', function() {
 
     it('should detect value change', function() {
       setup({'a': 'hello'});
-      watchGrp.watch(parse('a'), logCurrentValue);
+      watchGrp.watchExpression(parse('a'), logCurrentValue);
       watchGrp.detectChanges();
       context.a = 'bye';
       watchGrp.detectChanges();
@@ -108,7 +106,7 @@ describe('WatchGroup', function() {
 
     it('should not react when previously watched field changes', function() {
       setup({'a': 'hello'});
-      var watch = watchGrp.watch(parse('a'), logCurrentValue);
+      var watch = watchGrp.watchExpression(parse('a'), logCurrentValue);
       watchGrp.detectChanges();
       watch.remove();
 
@@ -121,7 +119,7 @@ describe('WatchGroup', function() {
 
     it('should not react when unwatched field changes', function() {
       setup({'a': 'hello'});
-      watchGrp.watch(parse('a'), logCurrentValue);
+      watchGrp.watchExpression(parse('a'), logCurrentValue);
       watchGrp.detectChanges();
 
       context.b = "cant see me";
@@ -135,23 +133,23 @@ describe('WatchGroup', function() {
 
       // should fire on initial adding
       expect(watchGrp.fieldCost).toBe(0);
-      expect(detector.count).toBe(0);
+      expect(watchGrp.recordCount).toBe(0);
     });
 
 
     it('should watch all fields in property chain when watched', function() {
       setup({'a': {'b': 'hello'}});
-      var watch = watchGrp.watch(parse('a.b'), logCurrentValue);
+      var watch = watchGrp.watchExpression(parse('a.b'), logCurrentValue);
 
       expect(watch.expression).toBe('a.b');
       expect(watchGrp.fieldCost).toBe(2);
-      expect(detector.count).toBe(2);
+      expect(watchGrp.recordCount).toBe(2);
     });
 
 
     it('should detect changes to nested property value', function() {
       setup({'a': {'b': 'hello'}});
-      watchGrp.watch(parse('a.b'), logCurrentValue);
+      watchGrp.watchExpression(parse('a.b'), logCurrentValue);
 
       watchGrp.detectChanges();
       expect(`${logger}`).toBe('hello');
@@ -160,7 +158,7 @@ describe('WatchGroup', function() {
 
     it('should not react on extra detectChanges for nested object properties', function() {
       setup({'a': {'b': 'hello'}});
-      watchGrp.watch(parse('a.b'), logCurrentValue);
+      watchGrp.watchExpression(parse('a.b'), logCurrentValue);
 
       watchGrp.detectChanges();
       watchGrp.detectChanges();
@@ -170,7 +168,7 @@ describe('WatchGroup', function() {
 
     it('should not react when intermediary object is replaced with "equal" object', function() {
       setup({'a': {'b': 'hello'}});
-      watchGrp.watch(parse('a.b'), logCurrentValue);
+      watchGrp.watchExpression(parse('a.b'), logCurrentValue);
 
       watchGrp.detectChanges();
       context.a = {'b': 'hello'};
@@ -181,7 +179,7 @@ describe('WatchGroup', function() {
 
     it('should react when intermediary object changes and watched field value changes', function() {
       setup({'a': {'b': 'hello'}});
-      watchGrp.watch(parse('a.b'), logCurrentValue);
+      watchGrp.watchExpression(parse('a.b'), logCurrentValue);
       watchGrp.detectChanges();
 
       context.a = {'b': 'hello2'};
@@ -192,7 +190,7 @@ describe('WatchGroup', function() {
 
     it('should react when nested watched field value changes', function() {
       setup({'a': {'b': 'hello'}});
-      watchGrp.watch(parse('a.b'), logCurrentValue);
+      watchGrp.watchExpression(parse('a.b'), logCurrentValue);
       watchGrp.detectChanges();
 
       // should detect when watched fields value changes
@@ -204,7 +202,7 @@ describe('WatchGroup', function() {
 
     it('should remove associated all associated field watches when watch removed', function() {
       setup({'a': {'b': 'hello'}});
-      var watch = watchGrp.watch(parse('a.b'), logCurrentValue);
+      var watch = watchGrp.watchExpression(parse('a.b'), logCurrentValue);
 
       // should cleanup after itself
       watch.remove();
@@ -214,7 +212,7 @@ describe('WatchGroup', function() {
 
     it('should not react when previously watched nested field changes', function() {
       setup({'a': {'b': 'hello'}});
-      var watch = watchGrp.watch(parse('a.b'), logCurrentValue);
+      var watch = watchGrp.watchExpression(parse('a.b'), logCurrentValue);
       watchGrp.detectChanges();
 
       watch.remove();
@@ -226,7 +224,7 @@ describe('WatchGroup', function() {
 
     it('should not react when unwatched nested field changes', function() {
       setup({'a': {'b': 'hello'}});
-      watchGrp.watch(parse('a.b'), logCurrentValue);
+      watchGrp.watchExpression(parse('a.b'), logCurrentValue);
       watchGrp.detectChanges();
 
       context.a.c = "cant see me";
@@ -242,9 +240,9 @@ describe('WatchGroup', function() {
 
       context.user = user1;
 
-      var watch = watchGrp.watch(parse('user'), logCurrentValue);
-      var watchFirst = watchGrp.watch(parse('user.first'), logCurrentValue);
-      var watchLast = watchGrp.watch(parse('user.last'), logCurrentValue);
+      var watch = watchGrp.watchExpression(parse('user'), logCurrentValue);
+      var watchFirst = watchGrp.watchExpression(parse('user.first'), logCurrentValue);
+      var watchLast = watchGrp.watchExpression(parse('user.last'), logCurrentValue);
 
       watchGrp.detectChanges();
       expect(logger.toArray()).toEqual([user1, 'misko', 'hevery']);
@@ -258,9 +256,9 @@ describe('WatchGroup', function() {
 
     it('should cleanup reused handlers', function() {
       setup({'user': {'first': 'misko', 'last': 'hevery'}});
-      var watch = watchGrp.watch(parse('user'), logCurrentValue);
-      var watchFirst = watchGrp.watch(parse('user.first'), logCurrentValue);
-      var watchLast = watchGrp.watch(parse('user.last'), logCurrentValue);
+      var watch = watchGrp.watchExpression(parse('user'), logCurrentValue);
+      var watchFirst = watchGrp.watchExpression(parse('user.first'), logCurrentValue);
+      var watchLast = watchGrp.watchExpression(parse('user.last'), logCurrentValue);
 
       watch.remove();
       expect(watchGrp.fieldCost).toBe(3);
@@ -275,7 +273,7 @@ describe('WatchGroup', function() {
 
     it('should throw when watch is removed twice', function() {
       setup();
-      var watch = watchGrp.watch(parse('a'), logCurrentValue);
+      var watch = watchGrp.watchExpression(parse('a'), logCurrentValue);
 
       watch.remove();
       expect(function() {
@@ -290,7 +288,7 @@ describe('WatchGroup', function() {
     it('should increase eval cost for pure function watches', function() {
       setup({'a': {'val': 1}, 'b': {'val': 2}});
 
-      var watch = watchGrp.watch(new PureFunctionAST('add', function(a, b) {
+      var watch = watchGrp.watchExpression(new PureFunctionAST('add', function(a, b) {
         return a + b;
       }, [parse('a.val'), parse('b.val')]), logCurrentValue);
 
@@ -304,7 +302,7 @@ describe('WatchGroup', function() {
     it('should react when pure function return value changes', function() {
       setup({'a': {'val': 1}, 'b': {'val': 2}});
 
-      var watch = watchGrp.watch(new PureFunctionAST('add', function(a, b) {
+      var watch = watchGrp.watchExpression(new PureFunctionAST('add', function(a, b) {
         logger.log('+');
         return a + b;
       }, [parse('a.val'), parse('b.val')]), logCurrentValue);
@@ -317,7 +315,7 @@ describe('WatchGroup', function() {
       setup();
       var childWatchGrp = watchGrp.newGroup({'a': 1, 'b': 2});
 
-      var watch = childWatchGrp.watch(new PureFunctionAST('add', function(a, b) {
+      var watch = childWatchGrp.watchExpression(new PureFunctionAST('add', function(a, b) {
         logger.log('+');
         return a + b;
       }, [parse('a'), parse('b')]), logCurrentValue);
@@ -329,7 +327,7 @@ describe('WatchGroup', function() {
     it('should not react when pure function returns old value', function() {
       setup({'a': {'val': 1}, 'b': {'val': 2}});
 
-      var watch = watchGrp.watch(new PureFunctionAST('add', function(a, b) {
+      var watch = watchGrp.watchExpression(new PureFunctionAST('add', function(a, b) {
         logger.log('+');
         return a + b;
       }, [parse('a.val'), parse('b.val')]), logCurrentValue);
@@ -343,7 +341,7 @@ describe('WatchGroup', function() {
     it('should react when pure function return value changes', function() {
       setup({'a': {'val': 1}, 'b': {'val': 2}});
 
-      var watch = watchGrp.watch(new PureFunctionAST('add', function(a, b) {
+      var watch = watchGrp.watchExpression(new PureFunctionAST('add', function(a, b) {
         logger.log('+');
         return a + b;
       }, [parse('a.val'), parse('b.val')]), logCurrentValue);
@@ -362,7 +360,7 @@ describe('WatchGroup', function() {
     it('should cleanup eval cost when watch removed', function() {
       setup({'a': {'val': 1}, 'b': {'val': 2}});
 
-      var watch = watchGrp.watch(new PureFunctionAST('add', function(a, b) {
+      var watch = watchGrp.watchExpression(new PureFunctionAST('add', function(a, b) {
         logger.log('+');
         return a + b;
       }, [parse('a.val'), parse('b.val')]), logCurrentValue);
@@ -376,7 +374,7 @@ describe('WatchGroup', function() {
     it('should not react when unwatched eval arguments change', function() {
       setup({'a': {'val': 1}, 'b': {'val': 2}});
 
-      var watch = watchGrp.watch(new PureFunctionAST('add', function(a, b) {
+      var watch = watchGrp.watchExpression(new PureFunctionAST('add', function(a, b) {
         logger.log('+');
         return a + b;
       }, [parse('a.val'), parse('b.val')]), logCurrentValue);
@@ -403,7 +401,7 @@ describe('WatchGroup', function() {
     it('should read constant', function() {
       // should fire on initial adding
       expect(watchGrp.fieldCost).toBe(0);
-      var watch = watchGrp.watch(new ConstantAST(123), function(v, p) {
+      var watch = watchGrp.watchExpression(new ConstantAST(123), function(v, p) {
         logger.log(v);
       });
       expect(watch.expression).toBe('123');
@@ -424,7 +422,7 @@ describe('WatchGroup', function() {
       }, [new PureFunctionAST('++', function(v) {
         return v + 1;
       }, [parse('a')])]);
-      var watch = watchGrp.watch(ast, function(v, p) {
+      var watch = watchGrp.watchExpression(ast, function(v, p) {
         logger.log(v);
       });
 
@@ -446,9 +444,9 @@ describe('WatchGroup', function() {
       setup({'obj': {'fn': fn}, 'arg1': 'OUT', 'arg2': 'IN'});
 
       var ast = new MethodAST(parse('obj'), 'fn', [parse('arg1')]);
-      var watch = watchGrp.watch(ast, function(v, p) {
+      var watch = watchGrp.watchExpression(ast, function(v, p) {
         var ast = new MethodAST(parse('obj'), 'fn', [parse('arg2')]);
-        watchGrp.watch(ast, function(v, p) {
+        watchGrp.watchExpression(ast, function(v, p) {
           logger.log(`reaction: ${v}`);
         });
       });
@@ -458,7 +456,7 @@ describe('WatchGroup', function() {
     it('should call methods of string primitives', function() {
       setup({'text': 'abc'});
       var ast = new MethodAST(parse('text'), 'toUpperCase', []);
-      watchGrp.watch(ast, logCurrentValue);
+      watchGrp.watchExpression(ast, logCurrentValue);
       watchGrp.detectChanges();
       expect(`${logger}`).toBe('ABC');
     });
@@ -468,7 +466,7 @@ describe('WatchGroup', function() {
       setup({'text': ''});
       var reaction = jasmine.createSpy('reaction');
       var ast = new MethodAST(parse('text'), 'toUpperCase', []);
-      watchGrp.watch(ast, reaction);
+      watchGrp.watchExpression(ast, reaction);
       watchGrp.detectChanges();
       expect(reaction).toHaveBeenCalledWith('', undefined);
     });
@@ -478,7 +476,7 @@ describe('WatchGroup', function() {
       setup({'num': 0});
       var reaction = jasmine.createSpy('reaction');
       var ast = new MethodAST(parse('num'), 'toFixed', []);
-      watchGrp.watch(ast, reaction);
+      watchGrp.watchExpression(ast, reaction);
       watchGrp.detectChanges();
       expect(reaction).toHaveBeenCalledWith('0', undefined);
     });
@@ -488,7 +486,7 @@ describe('WatchGroup', function() {
       setup({'boolean': false});
       var reaction = jasmine.createSpy('reaction');
       var ast = new MethodAST(parse('boolean'), 'valueOf', []);
-      watchGrp.watch(ast, reaction);
+      watchGrp.watchExpression(ast, reaction);
       watchGrp.detectChanges();
       expect(reaction).toHaveBeenCalledWith(false, undefined);
     });
@@ -497,7 +495,7 @@ describe('WatchGroup', function() {
     it('should call methods of number primitives', function() {
       setup({num: 1.46483});
       var ast = new MethodAST(parse('num'), 'toFixed', []);
-      watchGrp.watch(ast, logCurrentValue);
+      watchGrp.watchExpression(ast, logCurrentValue);
       watchGrp.detectChanges();
       expect(`${logger}`).toBe('1');
     });
@@ -506,9 +504,9 @@ describe('WatchGroup', function() {
     it('should not eval a function if registered during reaction', function() {
       setup({'text': 'abc'});
       var ast = new MethodAST(parse('text'), 'toLowerCase', []);
-      var watch = watchGrp.watch(ast, function(v, p) {
+      var watch = watchGrp.watchExpression(ast, function(v, p) {
         var ast = new MethodAST(parse('text'), 'toUpperCase', []);
-        watchGrp.watch(ast, logCurrentValue);
+        watchGrp.watchExpression(ast, logCurrentValue);
       });
 
       watchGrp.detectChanges();
@@ -540,7 +538,7 @@ describe('WatchGroup', function() {
     it('should not throw watching child property of undefined', function() {
       setup({});
       expect(function() {
-        watchGrp.watch(parse('a.b'), logCurrentValue);
+        watchGrp.watchExpression(parse('a.b'), logCurrentValue);
         watchGrp.detectChanges();
       }).not.toThrow();
     });
@@ -548,7 +546,7 @@ describe('WatchGroup', function() {
 
     it('should evaluate listener when child of previously undefined object changes', function() {
       setup({});
-      watchGrp.watch(parse('a.b'), logCurrentValue);
+      watchGrp.watchExpression(parse('a.b'), logCurrentValue);
       watchGrp.detectChanges();
 
       context.a = {};
@@ -640,7 +638,7 @@ describe('WatchGroup', function() {
           ])
         ]);
 
-        watchGrp.watch(ast, logCurrentValue);
+        watchGrp.watchExpression(ast, logCurrentValue);
         watchGrp.detectChanges();
         expect(logger.toArray()[0]).toEqual([-4, -3, -1, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 11]);
       });
@@ -658,7 +656,7 @@ describe('WatchGroup', function() {
           ])
         ]);
 
-        watchGrp.watch(ast, logCurrentValue);
+        watchGrp.watchExpression(ast, logCurrentValue);
         watchGrp.detectChanges();
 
         context.arr.splice(2, 3);
@@ -675,7 +673,7 @@ describe('WatchGroup', function() {
             parse('text'), parse('joiner')
           ]), parse('name')
         ]);
-        watchGrp.watch(ast, logCurrentValue);
+        watchGrp.watchExpression(ast, logCurrentValue);
         watchGrp.detectChanges();
         expect(`${logger}`).toBe('hello, caitp');
       });
@@ -690,7 +688,7 @@ describe('WatchGroup', function() {
             parse('text'), parse('joiner')
           ]), parse('name')
         ]);
-        watchGrp.watch(ast, logCurrentValue);
+        watchGrp.watchExpression(ast, logCurrentValue);
         watchGrp.detectChanges();
         context.text = 'bye';
         context.name += '!';
@@ -705,7 +703,7 @@ describe('WatchGroup', function() {
 
       function setupChildGroups(detectAndClear) {
         setup();
-        watchGrp.watch(parse('a'), logValue('0a'));
+        watchGrp.watchExpression(parse('a'), logValue('0a'));
         proxy1 = Object.create(context);
         proxy2 = Object.create(context);
         proxy3 = Object.create(context);
@@ -713,11 +711,11 @@ describe('WatchGroup', function() {
         child1b = watchGrp.newGroup(proxy2);
         child2 = child1a.newGroup(proxy3);
 
-        child1a.watch(parse('a'), logValue('1a'));
-        child1b.watch(parse('a'), logValue('1b'));
-        watchGrp.watch(parse('a'), logValue('0A'));
-        child1a.watch(parse('a'), logValue('1A'));
-        child2.watch(parse('a'), logValue('2A'));
+        child1a.watchExpression(parse('a'), logValue('1a'));
+        child1b.watchExpression(parse('a'), logValue('1b'));
+        watchGrp.watchExpression(parse('a'), logValue('0A'));
+        child1a.watchExpression(parse('a'), logValue('1A'));
+        child2.watchExpression(parse('a'), logValue('2A'));
 
         if (detectAndClear === true) {
           watchGrp.detectChanges();
@@ -805,13 +803,13 @@ describe('WatchGroup', function() {
         setup({ 'name': 'misko' });
 
         var child = watchGrp.newGroup(context);
-        watchGrp.watch(parse('name'), function(v, p) {
+        watchGrp.watchExpression(parse('name'), function(v, p) {
           logger.log(`root ${v}`);
           if (v === 'destroy') {
             child.remove();
           }
         });
-        child.watch(parse('name'), function(v, p) {
+        child.watchExpression(parse('name'), function(v, p) {
           logger.log(`child ${v}`);
         });
         watchGrp.detectChanges();
@@ -830,10 +828,10 @@ describe('WatchGroup', function() {
         context.a = 'OK';
         context.b = 'BAD';
         childContext.b = 'OK';
-        watchGrp.watch(parse('a'), function(v, p) {
+        watchGrp.watchExpression(parse('a'), function(v, p) {
           logger.log(v);
         });
-        watchGrp.newGroup(childContext).watch(parse('b'), logCurrentValue);
+        watchGrp.newGroup(childContext).watchExpression(parse('b'), logCurrentValue);
 
         watchGrp.detectChanges();
         expect(logger.toArray()).toEqual(['OK', 'OK']);
