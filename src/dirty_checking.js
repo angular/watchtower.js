@@ -128,6 +128,9 @@ export class DirtyCheckingChangeDetectorGroup {
     }
     return (root instanceof DirtyCheckingChangeDetector) ? root : null;
   }
+  get _rootGroup(){
+    return this._root;
+  }
   get _childInclRecordTail() {
     var tail = this, nextTail;
     while ((nextTail = tail._childTail) !== null) {
@@ -252,7 +255,7 @@ export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGrou
   }
 }
 
-class ChangeIterator {
+export class ChangeIterator {
   constructor(next) {
     this._current = null;
     this._next = next;
@@ -278,7 +281,7 @@ class ChangeIterator {
   }
 }
 
-class DirtyCheckingRecord {
+export class DirtyCheckingRecord {
   constructor(group, object, fieldName, getter, handler) {
     this._group = group;
     this._getter = getter;
@@ -289,11 +292,17 @@ class DirtyCheckingRecord {
     this.object = object;
     this._nextRecord = this._prevRecord = this._nextChange = null;
   }
+
   static marker() {
     var record = new DirtyCheckingRecord(null, null, null, null, null);
     record._mode = _MODE_MARKER_;
     return record;
   }
+
+  get isMarker(){
+    return this._mode == _MODE_MARKER_;
+  }
+
   get nextChange() {
     return this._nextChange;
   }
@@ -346,7 +355,7 @@ class DirtyCheckingRecord {
       return;
     }
 
-    this._observer = this._group && this._group._root.getObserver(obj, this._field);
+    this._observer = this._group && this._group._rootGroup.getObserver(obj, this._field);
       
     if(this._observer){
       this._mode = _NOTIFIED_;
