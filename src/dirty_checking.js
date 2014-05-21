@@ -334,6 +334,17 @@ class DirtyCheckingRecord extends ChangeRecord {
     }
     if (typeof obj === "object") {
       this._mode = _MODE_MAP_FIELD_;
+
+      if (obj && this._field !== null) {
+        var object = obj, field = this._field;
+        while (object && !object.hasOwnProperty(field)) {
+          object = Object.getPrototypeOf(object);
+        }
+        if (!object) {
+          throw new Error("property '" + field + "' not found in object");
+        }
+      }
+
       // _instanceMirror = null; --- Reflection needed?
     } else if (this._getter !== null) {
       this._mode = _MODE_GETTER_;
