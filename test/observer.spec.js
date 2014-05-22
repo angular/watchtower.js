@@ -147,7 +147,7 @@ class ExplicitObserverSelector{
 
   getObserver(obj, field){
     var observer;
-    
+
     this.lastObj = obj;
     this.lastField = field;
 
