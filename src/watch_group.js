@@ -120,7 +120,7 @@ export class WatchGroup {
 
     return count;
   }
- 
+
   get isAttached() {
     var group = this;
     var root = this._rootGroup;
@@ -161,7 +161,7 @@ export class WatchGroup {
 
   get _childWatchGroupTail() {
     var tail = this, nextTail;
-    
+
     while ((nextTail = tail._watchGroupTail) !== null) {
       tail = nextTail;
     }
@@ -223,14 +223,14 @@ export class WatchGroup {
     this._nextWatchGroup = this._prevWatchGroup = null;
 
     //TODO: this._changeDetector.remove();
-    
+
     this._rootGroup._removeCount++;
     this._parentWatchGroup = null;
 
     // Unlink the _watchRecord
     var firstEvalWatch = this._evalWatchHead;
-    var lastEvalWatch = (this._watchGroupTail === null 
-      ? this 
+    var lastEvalWatch = (this._watchGroupTail === null
+      ? this
       : this._watchGroupTail)._evalWatchTail;
 
     var prev = firstEvalWatch._prevEvalWatch;
@@ -499,8 +499,8 @@ export class RootWatchGroup extends WatchGroup {
 
         if (evalRecord.check() && changeLog){
           changeLog(
-            evalRecord.handler.expression, 
-            evalRecord.currentValue, 
+            evalRecord.handler.expression,
+            evalRecord.currentValue,
             evalRecord.previousValue
             );
         }

@@ -109,7 +109,7 @@ beforeEach(function() {
       this.message = function() {
         return `expected changes [${deltas.join(', ')}] to equal [${expected.join(', ')}]`;
       }
-      return count == expected.length;      
+      return count == expected.length;
     },
 
     toEqualChanges: function(expected) {

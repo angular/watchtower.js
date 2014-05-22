@@ -115,7 +115,7 @@ export class ChangeRecord {
     }
 
     this._observer = this._group && this._group._rootGroup.getObserver(obj, this.field);
-      
+
     if(this._observer){
       this._mode = _NOTIFIED_;
       this.newValue = this._observer.open((value) =>{
@@ -135,7 +135,7 @@ export class ChangeRecord {
 
     switch (this._mode) {
       case _NOT_NOTIFIED_:
-      case _MODE_MARKER_: 
+      case _MODE_MARKER_:
         return false;
       case _NOTIFIED_:
         current = this.newValue;
@@ -151,7 +151,7 @@ export class ChangeRecord {
         break;
       case _MODE_GETTER_:
         current = this._getter(this.object);
-        break;   
+        break;
       case _MODE_MAP_FIELD_:
         if (!this.object) return undefined;
         current = this.object[this.field];
@@ -757,7 +757,7 @@ export class CollectionChangeRecord {
 
     return record;
   }
-  
+
   _collection_moveAfter(record, prev, index) {
     this._collection_unlink(record);
     this._collection_insertAfter(record, prev, index);
@@ -1056,7 +1056,7 @@ class DuplicateMap {
 
   remove(record) {
     var list = this._map.get(record.item);
-    
+
     // TODO: traceur assert()
     // assert(list != null)
     if (list.remove(record)) {

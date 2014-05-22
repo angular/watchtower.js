@@ -248,7 +248,7 @@ export class _EvalWatchRecord {
         this.mode = _MODE_METHOD_;
       }
     }
-    
+
     /**
      * TODO(caitp): The usefulness of these blocks is yet to be discovered, but I'm sure it's out
      * there somewhere.
