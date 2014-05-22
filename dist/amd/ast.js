@@ -1,17 +1,14 @@
-define(['./change_detection', './watch_record'], function($__0,$__1) {
+define(['./watch_record'], function($__0) {
   "use strict";
   var __moduleName = "ast";
   if (!$__0 || !$__0.__esModule)
     $__0 = {'default': $__0};
-  if (!$__1 || !$__1.__esModule)
-    $__1 = {'default': $__1};
-  var WatchRecord = $traceurRuntime.assertObject($__0).WatchRecord;
-  var $__3 = $traceurRuntime.assertObject($__1),
-      _Handler = $__3._Handler,
-      _ConstantHandler = $__3._ConstantHandler,
-      _InvokeHandler = $__3._InvokeHandler,
-      _FieldHandler = $__3._FieldHandler,
-      _EvalWatchRecord = $__3._EvalWatchRecord;
+  var $__2 = $traceurRuntime.assertObject($__0),
+      _Handler = $__2._Handler,
+      _ConstantHandler = $__2._ConstantHandler,
+      _InvokeHandler = $__2._InvokeHandler,
+      _FieldHandler = $__2._FieldHandler,
+      _EvalWatchRecord = $__2._EvalWatchRecord;
   function _argsList(list) {
     if (!list)
       list = [];
@@ -20,8 +17,9 @@ define(['./change_detection', './watch_record'], function($__0,$__1) {
     return list.join(', ');
   }
   var AST = function AST(expression) {
-    if (typeof expression !== "string")
+    if (typeof expression !== "string") {
       throw "expression must be a string";
+    }
     this.expression = expression.indexOf('#.') === 0 ? expression.substr(2) : expression;
   };
   ($traceurRuntime.createClass)(AST, {
@@ -41,8 +39,9 @@ define(['./change_detection', './watch_record'], function($__0,$__1) {
       return new _ConstantWatchRecord(group, this.expression, group.context);
     }}, {}, AST);
   var ConstantAST = function ConstantAST(constant, expression) {
-    if (arguments.length < 2)
+    if (arguments.length < 2) {
       expression = null;
+    }
     $traceurRuntime.superCall(this, $ConstantAST.prototype, "constructor", [expression === null ? (typeof constant === "string" ? ("\"" + constant + "\"") : ("" + constant)) : expression]);
     this.constant = constant;
   };
@@ -90,6 +89,7 @@ define(['./change_detection', './watch_record'], function($__0,$__1) {
   var _ConstantWatchRecord = function _ConstantWatchRecord(watchGroup, expression, currentValue) {
     this.currentValue = currentValue;
     this.handler = new _ConstantHandler(watchGroup, expression, currentValue);
+    this.field = this.previousValue = this.object = this.nextChange = null;
   };
   ($traceurRuntime.createClass)(_ConstantWatchRecord, {
     check: function() {
@@ -97,23 +97,8 @@ define(['./change_detection', './watch_record'], function($__0,$__1) {
     },
     remove: function() {
       return null;
-    },
-    get field() {
-      return null;
-    },
-    get previousValue() {
-      return null;
-    },
-    get object() {
-      return null;
-    },
-    set object(value) {
-      return null;
-    },
-    get nextChange() {
-      return null;
     }
-  }, {}, WatchRecord);
+  }, {});
   return {
     get AST() {
       return AST;

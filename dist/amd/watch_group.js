@@ -1,4 +1,4 @@
-define(['./ast', './change_detection', './linked_list', './watch_record'], function($__0,$__1,$__2,$__3) {
+define(['./ast', './linked_list', './watch_record', './dirty_checking'], function($__0,$__1,$__2,$__3) {
   "use strict";
   var __moduleName = "watch_group";
   if (!$__0 || !$__0.__esModule)
@@ -10,15 +10,14 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
   if (!$__3 || !$__3.__esModule)
     $__3 = {'default': $__3};
   var AST = $traceurRuntime.assertObject($__0).AST;
-  var WatchRecord = $traceurRuntime.assertObject($__1).WatchRecord;
-  var $__5 = $traceurRuntime.assertObject($__2),
+  var $__5 = $traceurRuntime.assertObject($__1),
       _LinkedList = $__5._LinkedList,
       _LinkedListItem = $__5._LinkedListItem,
       _WatchList = $__5._WatchList,
       _WatchGroupList = $__5._WatchGroupList,
       _ArgHandlerList = $__5._ArgHandlerList,
       _EvalWatchList = $__5._EvalWatchList;
-  var $__5 = $traceurRuntime.assertObject($__3),
+  var $__5 = $traceurRuntime.assertObject($__2),
       _Handler = $__5._Handler,
       _ConstantHandler = $__5._ConstantHandler,
       _CollectionHandler = $__5._CollectionHandler,
@@ -26,17 +25,20 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
       _FieldHandler = $__5._FieldHandler,
       _ArgHandler = $__5._ArgHandler,
       _EvalWatchRecord = $__5._EvalWatchRecord;
+  var $__5 = $traceurRuntime.assertObject($__3),
+      ChangeRecord = $__5.ChangeRecord,
+      ChangeRecordIterator = $__5.ChangeRecordIterator;
   function putIfAbsent(obj, key, ctor) {
     if (key in obj)
       return obj[key];
     return (obj[key] = ctor());
   }
-  var WatchGroup = function WatchGroup(parentWatchGroup, changeDetector, context, cache, rootGroup) {
+  var WatchGroup = function WatchGroup(parentWatchGroup, getterCache, context, cache, rootGroup) {
     this._parentWatchGroup = parentWatchGroup;
     this._watchGroupHead = this._watchGroupTail = null;
     this._nextWatchGroup = this._prevWatchGroup = null;
     this.id = (parentWatchGroup.id + "." + parentWatchGroup._nextChildId++);
-    this._changeDetector = changeDetector;
+    this._getterCache = getterCache;
     this.context = context;
     this._cache = cache;
     this._rootGroup = rootGroup;
@@ -44,17 +46,17 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
     this._marker = _EvalWatchRecord.marker();
     this._marker.watchGrp = this;
     this._evalWatchHead = this._evalWatchTail = this._marker;
-    this._fieldCost = 0;
-    this._collectionCost = 0;
-    this._evalCost = 0;
+    this._dirtyMarker = ChangeRecord.marker();
+    this._recordTail = this._parentWatchGroup._childInclRecordTail;
+    this._recordHead = this._recordTail = this._recordAdd(this._dirtyMarker);
+    this.fieldCost = 0;
+    this.collectionCost = 0;
+    this.evalCost = 0;
   };
   var $WatchGroup = WatchGroup;
   ($traceurRuntime.createClass)(WatchGroup, {
-    get fieldCost() {
-      return this._fieldCost;
-    },
     get totalFieldCost() {
-      var cost = this._fieldCost;
+      var cost = this.fieldCost;
       var group = this._watchGroupHead;
       while (group !== null) {
         cost += group.totalFieldCost;
@@ -62,11 +64,8 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
       }
       return cost;
     },
-    get collectionCost() {
-      return this._collectionCost;
-    },
     get totalCollectionCost() {
-      var cost = this._collectionCost;
+      var cost = this.collectionCost;
       var group = this._watchGroupHead;
       while (group !== null) {
         cost += group.totalCollectionCost;
@@ -74,17 +73,28 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
       }
       return cost;
     },
-    get evalCost() {
-      return this._evalCost;
-    },
     get totalEvalCost() {
-      var cost = this._evalCost;
+      var cost = this.evalCost;
       var group = this._watchGroupHead;
       while (group !== null) {
         cost += group.totalEvalCost;
         group = group._nextWatchGroup;
       }
       return cost;
+    },
+    get recordCount() {
+      var count = 0,
+          cursor = this._recordHead,
+          end = this._childInclRecordTail;
+      while (cursor !== null) {
+        if (!cursor.isMarker) {
+          ++count;
+        }
+        if (cursor === end)
+          break;
+        cursor = cursor.nextRecord;
+      }
+      return count;
     },
     get isAttached() {
       var group = this;
@@ -97,7 +107,7 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
       }
       return false;
     },
-    watch: function(expression, reactionFn) {
+    watchExpression: function(expression, reactionFn) {
       var watchRecord;
       if (expression.expression in this._cache) {
         watchRecord = this._cache[expression.expression];
@@ -109,18 +119,23 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
     get _childWatchGroupTail() {
       var tail = this,
           nextTail;
-      while ((nextTail = tail._watchGroupTail) !== null)
+      while ((nextTail = tail._watchGroupTail) !== null) {
         tail = nextTail;
+      }
       return tail;
+    },
+    get _childInclRecordTail() {
+      return this._childWatchGroupTail._recordTail;
     },
     newGroup: function(context) {
       var prev = this._childWatchGroupTail._evalWatchTail;
       var next = prev._nextEvalWatch;
-      if (arguments.length === 0 || context === null)
+      if (arguments.length === 0 || context === null) {
         context = this.context;
+      }
       var root = this._rootGroup === null ? this : this._rootGroup;
       var cache = context === null ? this._cache : {};
-      var childGroup = new $WatchGroup(this, this._changeDetector.newGroup(), context, cache, root);
+      var childGroup = new $WatchGroup(this, this._getterCache, context, cache, root);
       _WatchGroupList._add(this, childGroup);
       var marker = childGroup._marker;
       marker._prevEvalWatch = prev;
@@ -132,9 +147,17 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
       return childGroup;
     },
     remove: function() {
+      var prevRecord = this._recordHead.prevRecord;
+      var nextRecord = this._childInclRecordTail.nextRecord;
+      if (prevRecord !== null)
+        prevRecord.nextRecord = nextRecord;
+      if (nextRecord !== null)
+        nextRecord.prevRecord = prevRecord;
+      this._recordHead._prevWatchGroup = null;
+      this._recordTail._prevWatchGroup = null;
+      this._recordHead = this._recordTail = null;
       _WatchGroupList._remove(this._parentWatchGroup, this);
       this._nextWatchGroup = this._prevWatchGroup = null;
-      this._changeDetector.remove();
       this._rootGroup._removeCount++;
       this._parentWatchGroup = null;
       var firstEvalWatch = this._evalWatchHead;
@@ -181,8 +204,8 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
     addFieldWatch: function(lhs, name, expression) {
       var that = this;
       var fieldHandler = new _FieldHandler(this, expression);
-      var watchRecord = this._changeDetector.watch(null, name, fieldHandler);
-      this._fieldCost++;
+      var watchRecord = this.watchField(null, name, fieldHandler);
+      this.fieldCost++;
       fieldHandler.watchRecord = watchRecord;
       var lhsWR = putIfAbsent(this._cache, lhs.expression, function() {
         return lhs.setupWatch(that);
@@ -194,8 +217,8 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
     addCollectionWatch: function(ast) {
       var that = this;
       var collectionHandler = new _CollectionHandler(this, ast.expression);
-      var watchRecord = this._changeDetector.watch(null, null, collectionHandler);
-      this._collectionCost++;
+      var watchRecord = this.watchField(null, null, collectionHandler);
+      this.collectionCost++;
       collectionHandler.watchRecord = watchRecord;
       var astWR = putIfAbsent(this._cache, ast.expression, function() {
         return ast.setupWatch(that);
@@ -232,15 +255,58 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
         argHandler.acceptValue(record.currentValue);
       });
       _EvalWatchList._add(this, evalWatchRecord);
-      this._evalCost++;
+      this.evalCost++;
       if (this._rootGroup.isInsideInvokeDirty) {
         evalWatchRecord.check();
       }
       return evalWatchRecord;
+    },
+    watchField: function(context, field, handler) {
+      var getter = field === null ? null : this._getterCache.get(field);
+      return this._recordAdd(new ChangeRecord(this, context, field, getter, handler));
+    },
+    _recordAdd: function(record) {
+      var previous = this._recordTail,
+          next = previous === null ? null : previous.nextRecord;
+      record.nextRecord = next;
+      record.prevRecord = previous;
+      if (previous !== null)
+        previous.nextRecord = record;
+      if (next !== null)
+        next.prevRecord = record;
+      this._recordTail = record;
+      if (previous === this._dirtyMarker)
+        this._recordRemove(this._dirtyMarker);
+      return record;
+    },
+    _recordRemove: function(record) {
+      var previous = record.prevRecord,
+          next = record.nextRecord;
+      if (record === this._recordHead && record === this._recordTail) {
+        this._recordHead = this._recordTail = this._dirtyMarker;
+        this._dirtyMarker.nextRecord = next;
+        this._dirtyMarker.prevRecord = previous;
+        if (previous !== null)
+          previous.nextRecord = this._dirtyMarker;
+        if (next !== null)
+          next.prevRecord = this._dirtyMarker;
+      } else {
+        if (record === this._recordTail)
+          this._recordTail = previous;
+        if (record === this._recordHead)
+          this._recordHead = next;
+        if (previous !== null)
+          previous.nextRecord = next;
+        if (next !== null)
+          next.prevRecord = previous;
+      }
     }
   }, {});
-  var RootWatchGroup = function RootWatchGroup(changeDetector, context) {
-    this._changeDetector = changeDetector;
+  var RootWatchGroup = function RootWatchGroup(getterCache, observerSelector, context) {
+    this._getterCache = getterCache;
+    this._observerSelector = observerSelector || {getObserver: function() {
+        return null;
+      }};
     this.context = context;
     this._cache = {};
     this._parentWatchGroup = null;
@@ -251,34 +317,41 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
     this._marker.watchGrp = this;
     this._evalWatchHead = this._evalWatchTail = this._marker;
     this._dirtyWatchHead = this._dirtyWatchTail = null;
-    this._fieldCost = 0;
-    this._collectionCost = 0;
-    this._evalCost = 0;
+    this._fakeHead = ChangeRecord.marker();
+    this._dirtyMarker = ChangeRecord.marker();
+    this._recordHead = this._recordTail = this._dirtyMarker;
+    this.fieldCost = 0;
+    this.collectionCost = 0;
+    this.evalCost = 0;
+    this._rootGroup = this;
   };
   ($traceurRuntime.createClass)(RootWatchGroup, {
-    get _rootGroup() {
-      return this;
+    getObserver: function(obj, field) {
+      return this._observerSelector.getObserver(obj, field);
     },
     detectChanges: function(exceptionHandler, changeLog, fieldStopWatch, evalStopWatch, processStopWatch) {
-      var changeDetector = this._changeDetector;
-      var changeRecordIterator = changeDetector.collectChanges(exceptionHandler, fieldStopWatch);
-      if (processStopWatch)
+      var changeRecordIterator = this.collectChanges(exceptionHandler, fieldStopWatch);
+      if (processStopWatch) {
         processStopWatch.start();
+      }
       while (changeRecordIterator.iterate()) {
         var record = changeRecordIterator.current;
-        if (changeLog)
+        if (changeLog) {
           changeLog(record.handler.expression, record.currentValue, record.previousValue);
+        }
         record.handler.onChange(record);
       }
-      if (processStopWatch)
+      if (processStopWatch) {
         processStopWatch.stop();
+      }
       var evalRecord = this._evalWatchHead;
       var evalCount = 0;
       while (evalRecord !== null) {
         try {
           ++evalCount;
-          if (evalRecord.check() && changeLog)
+          if (evalRecord.check() && changeLog) {
             changeLog(evalRecord.handler.expression, evalRecord.currentValue, evalRecord.previousValue);
+          }
         } catch (e) {
           if (exceptionHandler)
             exceptionHandler(e);
@@ -291,8 +364,9 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
         evalStopWatch.stop();
         evalStopWatch.increment(evalCount);
       }
-      if (processStopWatch)
+      if (processStopWatch) {
         processStopWatch.stop();
+      }
       var count = 0;
       var dirtyWatch = this._dirtyWatchHead;
       this._dirtyWatchHead = null;
@@ -323,6 +397,36 @@ define(['./ast', './change_detection', './linked_list', './watch_record'], funct
         processStopWatch.increment(count);
       }
       return count;
+    },
+    collectChanges: function(exceptionHandler, stopwatch) {
+      if (stopwatch) {
+        stopwatch.start();
+      }
+      var changeTail = this._fakeHead,
+          current = this._recordHead,
+          count = 0;
+      while (current !== null) {
+        try {
+          if (current.check()) {
+            changeTail = changeTail.nextChange = current;
+          }
+          ++count;
+        } catch (e) {
+          if (exceptionHandler)
+            exceptionHandler(e);
+          else
+            throw e;
+        }
+        current = current.nextRecord;
+      }
+      changeTail.nextChange = null;
+      if (stopwatch) {
+        stopwatch.stop();
+        stopwatch.increment(count);
+      }
+      var changeHead = this._fakeHead.nextChange;
+      this._fakeHead.nextChange = null;
+      return new ChangeRecordIterator(changeHead);
     },
     get isInsideInvokeDirty() {
       return this._dirtyWatchHead === null && this._dirtyWatchTail !== null;

@@ -1,4 +1,3 @@
-import {WatchRecord} from './change_detection';
 import {_Handler,
   _ConstantHandler,
   _InvokeHandler,
@@ -13,8 +12,9 @@ function _argsList(list) {
 }
 export class AST {
   constructor(expression) {
-    if (typeof expression !== "string")
+    if (typeof expression !== "string") {
       throw "expression must be a string";
+    }
     this.expression = expression.indexOf('#.') === 0 ? expression.substr(2) : expression;
   }
   setupWatch(group) {
@@ -35,8 +35,9 @@ export class ContextReferenceAST extends AST {
 }
 export class ConstantAST extends AST {
   constructor(constant, expression) {
-    if (arguments.length < 2)
+    if (arguments.length < 2) {
       expression = null;
+    }
     super(expression === null ? (typeof constant === "string" ? `"${constant}"` : `${constant}`) : expression);
     this.constant = constant;
   }
@@ -85,30 +86,16 @@ export class CollectionAST extends AST {
     return group.addCollectionWatch(this.valueAST);
   }
 }
-class _ConstantWatchRecord extends WatchRecord {
+class _ConstantWatchRecord {
   constructor(watchGroup, expression, currentValue) {
     this.currentValue = currentValue;
     this.handler = new _ConstantHandler(watchGroup, expression, currentValue);
+    this.field = this.previousValue = this.object = this.nextChange = null;
   }
   check() {
     return false;
   }
   remove() {
-    return null;
-  }
-  get field() {
-    return null;
-  }
-  get previousValue() {
-    return null;
-  }
-  get object() {
-    return null;
-  }
-  set object(value) {
-    return null;
-  }
-  get nextChange() {
     return null;
   }
 }

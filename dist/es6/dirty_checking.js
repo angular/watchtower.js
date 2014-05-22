@@ -1,10 +1,3 @@
-import {ChangeDetector,
-  ChangeDetectorGroup,
-  ChangeRecord,
-  MapChangeRecord,
-  MapKeyValue,
-  CollectionChangeRecord,
-  CollectionChangeItem} from './change_detection';
 var _MODE_NAMES = ['MARKER', 'IDENT', 'REFLECT', 'GETTER', 'MAP[]', 'ITERABLE', 'MAP'];
 var _MODE_MARKER_ = 0;
 var _MODE_IDENTITY_ = 1;
@@ -13,6 +6,8 @@ var _MODE_GETTER_ = 3;
 var _MODE_MAP_FIELD_ = 4;
 var _MODE_ITERABLE_ = 5;
 var _MODE_MAP_ = 6;
+var _NOT_NOTIFIED_ = 10;
+var _NOTIFIED_ = 11;
 export class GetterCache {
   constructor(map) {
     this._map = map;
@@ -21,277 +16,47 @@ export class GetterCache {
     return this._map[field] || null;
   }
 }
-export class DirtyCheckingChangeDetectorGroup extends ChangeDetector {
-  constructor(parent, cache) {
-    this._parent = parent;
-    this._getterCache = cache;
-    this._marker = DirtyCheckingRecord.marker();
-    this._childHead = this._childTail = this._next = this._prev = null;
-    if (parent === null) {
-      this._recordHead = this._recordTail = this._marker;
-    } else {
-      this._recordTail = this._parent._childInclRecordTail;
-      this._recordHead = this._recordTail = this._recordAdd(this._marker);
-    }
-  }
-  watch(context, field, handler) {
-    var getter = field === null ? null : this._getterCache.get(field);
-    return this._recordAdd(new DirtyCheckingRecord(this, context, field, getter, handler));
-  }
-  remove() {
-    var root = this._root;
-    var prevRecord = this._recordHead._prevRecord;
-    var nextRecord = this._childInclRecordTail._nextRecord;
-    if (prevRecord !== null)
-      prevRecord._nextRecord = nextRecord;
-    if (nextRecord !== null)
-      nextRecord._prevRecord = prevRecord;
-    var cursor = this._recordHead;
-    while (cursor != nextRecord) {
-      cursor = cursor._nextRecord;
-    }
-    var prevGroup = this._prev;
-    var nextGroup = this._next;
-    if (prevGroup === null) {
-      this._parent._childHead = nextGroup;
-    } else {
-      prevGroup._next = nextGroup;
-    }
-    if (nextGroup === null) {
-      this._parent._childTail = prevGroup;
-    } else {
-      nextGroup._prev = prevGroup;
-    }
-    this._parent = null;
-    this._prev = this._next = null;
-    this._recordHead._prev = null;
-    this._recordTail._prev = null;
-    this._recordHead = this._recordTail = null;
-  }
-  _recordAdd(record) {
-    var previous = this._recordTail,
-        next = previous === null ? null : previous._nextRecord;
-    record._nextRecord = next;
-    record._prevRecord = previous;
-    if (previous !== null)
-      previous._nextRecord = record;
-    if (next !== null)
-      next._prevRecord = record;
-    this._recordTail = record;
-    if (previous === this._marker)
-      this._recordRemove(this._marker);
-    return record;
-  }
-  _recordRemove(record) {
-    var previous = record._prevRecord,
-        next = record._nextRecord;
-    if (record === this._recordHead && record === this._recordTail) {
-      this._recordHead = this._recordTail = this._marker;
-      this._marker._nextRecord = next;
-      this._marker._prevRecord = previous;
-      if (previous !== null)
-        previous._nextRecord = this._marker;
-      if (next !== null)
-        next._prevRecord = this._marker;
-    } else {
-      if (record === this._recordTail)
-        this._recordTail = previous;
-      if (record === this._recordHead)
-        this._recordHead = next;
-      if (previous !== null)
-        previous._nextRecord = next;
-      if (next !== null)
-        next._prevRecord = previous;
-    }
-  }
-  newGroup() {
-    var child = new DirtyCheckingChangeDetectorGroup(this, this._getterCache);
-    if (this._childHead === null) {
-      this._childHead = this._childTail = child;
-    } else {
-      child._prev = this._childTail;
-      this._childTail._next = child;
-      this._childTail = child;
-    }
-    return child;
-  }
-  get _root() {
-    var root = this,
-        next;
-    while ((next = root._parent) !== null) {
-      root = next;
-    }
-    return (root instanceof DirtyCheckingChangeDetector) ? root : null;
-  }
-  get _childInclRecordTail() {
-    var tail = this,
-        nextTail;
-    while ((nextTail = tail._childTail) !== null) {
-      tail = nextTail;
-    }
-    return tail._recordTail;
-  }
-  get count() {
-    var count = 0,
-        cursor = this._recordHead,
-        end = this._childInclRecordTail;
-    while (cursor !== null) {
-      if (cursor._mode !== _MODE_MARKER_) {
-        ++count;
-      }
-      if (cursor === end)
-        break;
-      cursor = cursor._nextRecord;
-    }
-    return count;
-  }
-  toString() {
-    var lines = [],
-        record,
-        records,
-        recordTail,
-        childGroup;
-    if (this._parent === null) {
-      var allRecords = [];
-      record = this._recordHead;
-      var includeChildrenTail = this._childInclRecordTail;
-      do {
-        allRecords.push(record.toString());
-        record = record._nextRecord;
-      } while (record !== includeChildrenTail);
-      lines.push("FIELDS: " + allRecords.join(', '));
-    }
-    records = [];
-    record = this._recordHead;
-    recordTail = this._recordTail;
-    while (record !== recordTail) {
-      records.push(record.toString());
-      record = record._nextRecord;
-    }
-    records.add(record.toString());
-    lines.add("DirtyCheckingChangeDetectorGroup(fields: " + records.join(', ') + ")");
-    childGroup = this._childHead;
-    while (childGroup !== null) {
-      lines.push('  ' + childGroup.toString().split('\n').join('\n  '));
-      childGroup = childGroup._next;
-    }
-    return lines.join('\n');
-  }
-}
-export class DirtyCheckingChangeDetector extends DirtyCheckingChangeDetectorGroup {
-  constructor(cache) {
-    super(null, cache);
-    this._fakeHead = DirtyCheckingRecord.marker();
-  }
-  _assertRecordsOk() {
-    var record = this._recordHead,
-        groups = [this],
-        group;
-    while (groups.length) {
-      group = groups.shift();
-      var childGroup = group._childTail;
-      while (childGroup !== null) {
-        groups.unshift(childGroup);
-        childGroup = childGroup._prev;
-      }
-      var groupRecord = group._recordHead,
-          groupTail = group._recordTail;
-      while (true) {
-        if (groupRecord === record)
-          record = record._nextRecord;
-        else
-          throw "lost: " + record + " found " + groupRecord + "\n" + this;
-        if (groupRecord === groupTail)
-          break;
-        groupRecord = groupRecord._nextRecord;
-      }
-    }
-    return true;
-  }
-  collectChanges(exceptionHandler, stopwatch) {
-    if (stopwatch)
-      stopwatch.start();
-    var changeTail = this._fakeHead,
-        current = this._recordHead,
-        count = 0;
-    while (current !== null) {
-      try {
-        if (current.check()) {
-          changeTail = changeTail._nextChange = current;
-        }
-        ++count;
-      } catch (e) {
-        if (exceptionHandler) {
-          exceptionHandler(e);
-        } else {
-          throw e;
-        }
-      }
-      current = current._nextRecord;
-    }
-    changeTail._nextChange = null;
-    if (stopwatch) {
-      stopwatch.stop();
-      stopwatch.increment(count);
-    }
-    var changeHead = this._fakeHead._nextChange;
-    this._fakeHead._nextChange = null;
-    return new ChangeIterator(changeHead);
-  }
-  remove() {
-    throw "Root ChangeDetector can not be removed";
-  }
-  get _root() {
-    return this;
-  }
-}
-class ChangeIterator {
+export class ChangeRecordIterator {
   constructor(next) {
-    this._current = null;
+    this.current = null;
     this._next = next;
   }
-  get current() {
-    return this._current;
-  }
   iterate() {
-    this._current = this._next;
+    this.current = this._next;
     if (this._next !== null) {
-      this._next = this._current._nextChange;
-      this._current._nextChange = null;
+      this._next = this.current.nextChange;
+      this.current.nextChange = null;
     }
-    return this._current !== null;
+    return this.current !== null;
   }
 }
-class DirtyCheckingRecord extends ChangeRecord {
+export class ChangeRecord {
   constructor(group, object, fieldName, getter, handler) {
     this._group = group;
     this._getter = getter;
-    this._handler = handler;
-    this._field = fieldName;
+    this.handler = handler;
+    this.field = fieldName;
     this.object = object;
-    this._nextRecord = this._prevRecord = this._nextChange = null;
+    this.nextRecord = this.prevRecord = this.nextChange = null;
   }
   static marker() {
-    var record = new DirtyCheckingRecord(null, null, null, null, null);
+    var record = new ChangeRecord(null, null, null, null, null);
     record._mode = _MODE_MARKER_;
+    record.isMarker = true;
     return record;
   }
-  get nextChange() {
-    return this._nextChange;
-  }
-  get field() {
-    return this._field;
-  }
-  get handler() {
-    return this._handler;
-  }
-  set handler(handler) {
-    this._handler = handler;
+  _clearObject() {
+    if (this._observer) {
+      this._observer.close();
+      this._observer = null;
+    }
+    this._object = null;
   }
   get object() {
     return this._object;
   }
   set object(obj) {
+    this._clearObject(obj);
     this._object = obj;
     if (obj === null) {
       this._mode = _MODE_IDENTITY_;
@@ -302,30 +67,40 @@ class DirtyCheckingRecord extends ChangeRecord {
         if (Array.isArray(obj)) {
           if (this._mode !== _MODE_ITERABLE_) {
             this._mode = _MODE_ITERABLE_;
-            this.currentValue = new _CollectionChangeRecord();
+            this.currentValue = new CollectionChangeRecord();
           }
         } else if (this._mode !== _MODE_MAP_) {
           this._mode = _MODE_MAP_;
-          this.currentValue = new _MapChangeRecord();
+          this.currentValue = new MapChangeRecord();
         }
       } else {
         this._mode = _MODE_IDENTITY_;
       }
       return;
     }
-    if (typeof obj === "object") {
-      this._mode = _MODE_MAP_FIELD_;
+    this._observer = this._group && this._group._rootGroup.getObserver(obj, this.field);
+    if (this._observer) {
+      this._mode = _NOTIFIED_;
+      this.newValue = this._observer.open((value) => {
+        this.newValue = value;
+        this._mode = _NOTIFIED_;
+      });
     } else if (this._getter !== null) {
       this._mode = _MODE_GETTER_;
     } else {
-      this._mode = _MODE_REFLECT_;
+      this._mode = _MODE_MAP_FIELD_;
     }
   }
   check() {
     var current;
     switch (this._mode) {
+      case _NOT_NOTIFIED_:
       case _MODE_MARKER_:
         return false;
+      case _NOTIFIED_:
+        current = this.newValue;
+        this._mode = _NOT_NOTIFIED_;
+        break;
       case _MODE_REFLECT_:
         if (!this.object)
           return undefined;
@@ -359,6 +134,7 @@ class DirtyCheckingRecord extends ChangeRecord {
     return false;
   }
   remove() {
+    this._clearObject();
     this._group._recordRemove(this);
   }
   toString() {
@@ -366,59 +142,44 @@ class DirtyCheckingRecord extends ChangeRecord {
     return `${_MODE_NAMES[this._mode]}[${this.field}]{${hashCode}}`;
   }
 }
-class _MapChangeRecord extends MapChangeRecord {
+export class MapChangeRecord {
   constructor() {
     this._records = {};
-    this._map = {};
-    this._mapHead = null;
-    this._changesHead = this._changesTail = null;
-    this._additionsHead = this._additionsTail = null;
-    this._removalsHead = this._removalsTail = null;
-  }
-  get map() {
-    return this._map;
-  }
-  get mapHead() {
-    return this._mapHead;
-  }
-  get changesHead() {
-    return this._changesHead;
-  }
-  get additionsHead() {
-    return this._additionsHead;
-  }
-  get removalsHead() {
-    return this._removalsHead;
+    this.map = {};
+    this.mapHead = null;
+    this.changesHead = this.changesTail = null;
+    this.additionsHead = this.additionsTail = null;
+    this.removalsHead = this.removalsTail = null;
   }
   get isDirty() {
-    return this._additionsHead !== null || this._changesHead !== null || this._removalsHead !== null;
+    return this.additionsHead !== null || this.changesHead !== null || this.removalsHead !== null;
   }
   forEachChange(fn) {
-    var record = this._changesHead;
+    var record = this.changesHead;
     while (record !== null) {
       fn(record);
-      record = record._nextChangedKeyValue;
+      record = record.nextChangedKeyValue;
     }
   }
   forEachAddition(fn) {
-    var record = this._additionsHead;
+    var record = this.additionsHead;
     while (record !== null) {
       fn(record);
-      record = record._nextAddedKeyValue;
+      record = record.nextAddedKeyValue;
     }
   }
   forEachRemoval(fn) {
-    var record = this._removalsHead;
+    var record = this.removalsHead;
     while (record !== null) {
       fn(record);
-      record = record._nextRemovedKeyValue;
+      record = record.nextRemovedKeyValue;
     }
   }
   _check(map) {
     this._reset();
-    this._map = map;
+    this.map = map;
     var records = this._records;
-    var oldSeqRecord = this._mapHead;
+    var oldSeqRecord = this.mapHead;
     var lastOldSeqRecord = null,
         lastNewSeqRecord = null;
     var seqChanged = false;
@@ -430,9 +191,9 @@ class _MapChangeRecord extends MapChangeRecord {
           newSeqRecord = null;
       if (oldSeqRecord !== null && key === oldSeqRecord.key) {
         newSeqRecord = oldSeqRecord;
-        if (value !== oldSeqRecord._currentValue) {
-          var prev = oldSeqRecord._previousValue = oldSeqRecord._currentValue;
-          oldSeqRecord._currentValue = value;
+        if (value !== oldSeqRecord.currentValue) {
+          var prev = oldSeqRecord.previousValue = oldSeqRecord.currentValue;
+          oldSeqRecord.currentValue = value;
           if (!((typeof prev === "number" && prev !== prev) && (typeof value === "number" && value !== value))) {
             this._addToChanges(oldSeqRecord);
           }
@@ -447,7 +208,7 @@ class _MapChangeRecord extends MapChangeRecord {
           newSeqRecord = records[key];
         } else {
           newSeqRecord = records[key] = new KeyValueRecord(key);
-          newSeqRecord._currentValue = value;
+          newSeqRecord.currentValue = value;
           this._addToAdditions(newSeqRecord);
         }
       }
@@ -456,199 +217,163 @@ class _MapChangeRecord extends MapChangeRecord {
           this._removeFromRemovals(newSeqRecord);
         }
         if (lastNewSeqRecord === null) {
-          this._mapHead = newSeqRecord;
+          this.mapHead = newSeqRecord;
         } else {
-          lastNewSeqRecord._nextKeyValue = newSeqRecord;
+          lastNewSeqRecord.nextKeyValue = newSeqRecord;
         }
       }
       lastOldSeqRecord = oldSeqRecord;
       lastNewSeqRecord = newSeqRecord;
-      oldSeqRecord = oldSeqRecord === null ? null : oldSeqRecord._nextKeyValue;
+      oldSeqRecord = oldSeqRecord === null ? null : oldSeqRecord.nextKeyValue;
     }
     this._truncate(lastOldSeqRecord, oldSeqRecord);
     return this.isDirty;
   }
   _reset() {
-    var record = this._changesHead,
+    var record = this.changesHead,
         nextRecord;
     while (record !== null) {
-      nextRecord = record._nextChangedKeyValue;
-      record._previousValue = record._currentValue;
-      record._nextChangedKeyValue = null;
+      nextRecord = record.nextChangedKeyValue;
+      record.previousValue = record.currentValue;
+      record.nextChangedKeyValue = null;
       record = nextRecord;
     }
-    record = this._additionsHead;
+    record = this.additionsHead;
     while (record !== null) {
-      nextRecord = record._nextAddedKeyValue;
-      record._previousValue = record._currentValue;
-      record._nextAddedKeyValue = null;
+      nextRecord = record.nextAddedKeyValue;
+      record.previousValue = record.currentValue;
+      record.nextAddedKeyValue = null;
       record = nextRecord;
     }
-    record = this._removalsHead;
+    record = this.removalsHead;
     while (record !== null) {
-      nextRecord = record._nextRemovedKeyValue;
-      record._nextRemovedKeyValue = null;
+      nextRecord = record.nextRemovedKeyValue;
+      record.nextRemovedKeyValue = null;
       record = nextRecord;
     }
-    this._changesHead = this._changesTail = null;
-    this._additionsHead = this._additionsTail = null;
-    this._removalsHead = this._removalsTail = null;
+    this.changesHead = this.changesTail = null;
+    this.additionsHead = this.additionsTail = null;
+    this.removalsHead = this.removalsTail = null;
   }
   _truncate(lastRecord, record) {
     while (record !== null) {
       if (lastRecord === null) {
-        this._mapHead = null;
+        this.mapHead = null;
       } else {
-        lastRecord._nextKeyValue = null;
+        lastRecord.nextKeyValue = null;
       }
-      var nextRecord = record._nextKeyValue;
-      record._nextKeyValue = null;
+      var nextRecord = record.nextKeyValue;
+      record.nextKeyValue = null;
       this._addToRemovals(record);
       lastRecord = record;
       record = nextRecord;
     }
-    record = this._removalsHead;
+    record = this.removalsHead;
     while (record !== null) {
-      record._previousValue = record._currentValue;
-      record._currentValue = null;
+      record.previousValue = record.currentValue;
+      record.currentValue = null;
       delete this._records[record.key];
-      record = record._nextRemovedKeyValue;
+      record = record.nextRemovedKeyValue;
     }
   }
   _isInRemovals(record) {
-    return record === this._removalsHead || record._nextRemovedKeyValue !== null || record._prevRemovedKeyValue !== null;
+    return record === this.removalsHead || record.nextRemovedKeyValue !== null || record.prevRemovedKeyValue !== null;
   }
   _addToRemovals(record) {
-    if (this._removalsHead === null) {
-      this._removalsHead = this._removalsTail = record;
+    if (this.removalsHead === null) {
+      this.removalsHead = this.removalsTail = record;
     } else {
-      this._removalsTail._nextRemovedKeyValue = record;
-      record._prevRemovedKeyValue = this._removalsTail;
-      this._removalsTail = record;
+      this.removalsTail.nextRemovedKeyValue = record;
+      record.prevRemovedKeyValue = this.removalsTail;
+      this.removalsTail = record;
     }
   }
   _removeFromSeq(prev, record) {
-    var next = record._nextKeyValue;
+    var next = record.nextKeyValue;
     if (prev === null) {
-      this._mapHead = next;
+      this.mapHead = next;
     } else {
-      prev._nextKeyValue = next;
+      prev.nextKeyValue = next;
     }
-    record._nextKeyValue = null;
+    record.nextKeyValue = null;
   }
   _removeFromRemovals(record) {
-    var prev = record._prevRemovedKeyValue,
-        next = record._nextRemovedKeyValue;
+    var prev = record.prevRemovedKeyValue,
+        next = record.nextRemovedKeyValue;
     if (prev === null) {
-      this._removalsHead = next;
+      this.removalsHead = next;
     } else {
-      prev._nextRemovedKeyValue = next;
+      prev.nextRemovedKeyValue = next;
     }
     if (next === null) {
-      this._removalsTail = prev;
+      this.removalsTail = prev;
     } else {
-      next._prevRemovedKeyValue = prev;
+      next.prevRemovedKeyValue = prev;
     }
-    record._prevRemovedKeyValue = record._nextRemovedKeyValue = null;
+    record.prevRemovedKeyValue = record.nextRemovedKeyValue = null;
   }
   _addToAdditions(record) {
-    if (this._additionsHead === null) {
-      this._additionsHead = this._additionsTail = record;
+    if (this.additionsHead === null) {
+      this.additionsHead = this.additionsTail = record;
     } else {
-      this._additionsTail._nextAddedKeyValue = record;
-      this._additionsTail = record;
+      this.additionsTail.nextAddedKeyValue = record;
+      this.additionsTail = record;
     }
   }
   _addToChanges(record) {
-    if (this._changesHead === null) {
-      this._changesHead = this._changesTail = record;
+    if (this.changesHead === null) {
+      this.changesHead = this.changesTail = record;
     } else {
-      this._changesTail._nextChangedKeyValue = record;
-      this._changesTail = record;
+      this.changesTail.nextChangedKeyValue = record;
+      this.changesTail = record;
     }
   }
 }
-class KeyValueRecord extends MapKeyValue {
+class KeyValueRecord {
   constructor(key) {
-    this._key = key;
-    this._previousValue = this._currentValue = null;
-    this._nextKeyValue = this._nextAddedKeyValue = this._nextChangedKeyValue = null;
-    this._nextRemovedKeyValue = this._prevRemovedKeyValue = null;
-  }
-  get key() {
-    return this._key;
-  }
-  get previousValue() {
-    return this._previousValue;
-  }
-  get currentValue() {
-    return this._currentValue;
-  }
-  get nextKeyValue() {
-    return this._nextKeyValue;
-  }
-  get nextAddedKeyValue() {
-    return this._nextAddedKeyValue;
-  }
-  get nextRemovedKeyValue() {
-    return this._nextRemovedKeyValue;
-  }
-  get nextChangedKeyValue() {
-    return this._nextChangedKeyValue;
+    this.key = key;
+    this.previousValue = this.currentValue = null;
+    this.nextKeyValue = this.nextAddedKeyValue = this.nextChangedKeyValue = null;
+    this.nextRemovedKeyValue = this.prevRemovedKeyValue = null;
   }
   toString() {
-    return this._previousValue === this._currentValue ? this._key : `${this._key}[${this._previousValue} -> ${this._currentValue}]`;
+    return this.previousValue === this.currentValue ? this.key : `${this.key}[${this.previousValue} -> ${this.currentValue}]`;
   }
 }
-class _CollectionChangeRecord extends CollectionChangeRecord {
+export class CollectionChangeRecord {
   constructor() {
-    this._iterable = null;
     this._items = new DuplicateMap();
     this._removedItems = new DuplicateMap();
-    this._collectionHead = this._collectionTail = null;
-    this._additionsHead = this._additionsTail = null;
-    this._movesHead = this._movesTail = null;
-    this._removalsHead = this._removalsTail = null;
-  }
-  get collectionHead() {
-    return this._collectionHead;
-  }
-  get additionsHead() {
-    return this._additionsHead;
-  }
-  get movesHead() {
-    return this._movesHead;
-  }
-  get removalsHead() {
-    return this._removalsHead;
+    this.iterable = null;
+    this.collectionHead = this.collectionTail = null;
+    this.additionsHead = this.additionsTail = null;
+    this.movesHead = this.movesTail = null;
+    this.removalsHead = this.removalsTail = null;
   }
   forEachAddition(fn) {
-    var record = this._additionsHead;
+    var record = this.additionsHead;
     while (record !== null) {
       fn(record);
-      record = record._nextAddedRec;
+      record = record.nextAddedRec;
     }
   }
   forEachMove(fn) {
-    var record = this._movesHead;
+    var record = this.movesHead;
     while (record !== null) {
       fn(record);
-      record = record._nextMovedRec;
+      record = record.nextMovedRec;
     }
   }
   forEachRemoval(fn) {
-    var record = this._removalsHead;
+    var record = this.removalsHead;
     while (record !== null) {
       fn(record);
-      record = record._nextRemovedRec;
+      record = record.nextRemovedRec;
     }
-  }
-  get iterable() {
-    return this._iterable;
   }
   _check(collection) {
     this._reset();
-    var record = this._collectionHead,
+    var record = this.collectionHead,
         maybeDirty = false,
         index,
         end,
@@ -663,7 +388,7 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
         } else if (maybeDirty) {
           record = this.verifyReinsertion(record, item, index);
         }
-        record = record._nextRec;
+        record = record.nextRec;
       }
     } else {
       index = 0;
@@ -674,34 +399,34 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
         } else if (maybeDirty) {
           record = this.verifyReinsertion(record, item, index);
         }
-        record = record._nextRec;
+        record = record.nextRec;
         index++;
       }
     }
     this._truncate(record);
-    this._iterable = collection;
+    this.iterable = collection;
     return this.isDirty;
   }
   _reset() {
     var record;
-    record = this._additionsHead;
+    record = this.additionsHead;
     while (record !== null) {
       record.previousIndex = record.currentIndex;
-      record = record._nextAddedRec;
+      record = record.nextAddedRec;
     }
-    this._additionsHead = this._additionsTail = null;
-    record = this._movesHead;
+    this.additionsHead = this.additionsTail = null;
+    record = this.movesHead;
     while (record !== null) {
       record.previousIndex = record.currentIndex;
-      var nextRecord = record._nextMovedRec;
-      record._nextMovedRec = null;
+      var nextRecord = record.nextMovedRec;
+      record.nextMovedRec = null;
       record = nextRecord;
     }
-    this._movesHead = this._movesTail = null;
-    this._removalsHead = this._removalsTail = null;
+    this.movesHead = this.movesTail = null;
+    this.removalsHead = this.removalsTail = null;
   }
   get isDirty() {
-    return this._additionsHead !== null || this._movesHead !== null || this._removalsHead !== null;
+    return this.additionsHead !== null || this.movesHead !== null || this.removalsHead !== null;
   }
   mismatch(record, item, index) {
     if (record !== null) {
@@ -713,9 +438,10 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
         return record;
       }
     }
-    var prev = record === null ? this._collectionTail : record._prevRec;
-    if (record !== null)
+    var prev = record === null ? this.collectionTail : record.prevRec;
+    if (record !== null) {
       this._collection_remove(record);
+    }
     record = this._items.get(item, index);
     if (record !== null) {
       this._collection_moveAfter(record, prev, index);
@@ -732,7 +458,7 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
   verifyReinsertion(record, item, index) {
     var reinsertRecord = this._removedItems.get(item);
     if (reinsertRecord !== null) {
-      record = this._collection_reinsertAfter(reinsertRecord, record._prevRec, index);
+      record = this._collection_reinsertAfter(reinsertRecord, record.prevRec, index);
     } else if (record.currentIndex != index) {
       record.currentIndex = index;
       this._moves_add(record);
@@ -741,7 +467,7 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
   }
   _truncate(record) {
     while (record !== null) {
-      var nextRecord = record._nextRec;
+      var nextRecord = record.nextRec;
       this._removals_add(this._collection_unlink(record));
       record = nextRecord;
     }
@@ -749,18 +475,18 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
   }
   _collection_reinsertAfter(record, insertPrev, index) {
     this._removedItems.remove(record);
-    var prev = record._prevRemovedRec;
-    var next = record._nextRemovedRec;
-    record._prevRemovedRec = record._nextRemovedRec = null;
+    var prev = record.prevRemovedRec;
+    var next = record.nextRemovedRec;
+    record.prevRemovedRec = record.nextRemovedRec = null;
     if (prev === null) {
-      this._removalsHead = next;
+      this.removalsHead = next;
     } else {
-      prev._nextRemovedRec = next;
+      prev.nextRemovedRec = next;
     }
     if (next === null) {
-      this._removalsTail = prev;
+      this.removalsTail = prev;
     } else {
-      next._prevRemovedRec = prev;
+      next.prevRemovedRec = prev;
     }
     this._collection_insertAfter(record, insertPrev, index);
     this._moves_add(record);
@@ -774,26 +500,26 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
   }
   _collection_addAfter(record, prev, index) {
     this._collection_insertAfter(record, prev, index);
-    if (this._additionsTail === null) {
-      this._additionsTail = this._additionsHead = record;
+    if (this.additionsTail === null) {
+      this.additionsTail = this.additionsHead = record;
     } else {
-      this._additionsTail = this._additionsTail._nextAddedRec = record;
+      this.additionsTail = this.additionsTail.nextAddedRec = record;
     }
     return record;
   }
   _collection_insertAfter(record, prev, index) {
-    var next = prev === null ? this._collectionHead : prev._nextRec;
-    record._nextRec = next;
-    record._prevRec = prev;
+    var next = prev === null ? this.collectionHead : prev.nextRec;
+    record.nextRec = next;
+    record.prevRec = prev;
     if (next === null) {
-      this._collectionTail = record;
+      this.collectionTail = record;
     } else {
-      next._prevRec = record;
+      next.prevRec = record;
     }
     if (prev === null) {
-      this._collectionHead = record;
+      this.collectionHead = record;
     } else {
-      prev._nextRec = record;
+      prev.nextRec = record;
     }
     this._items.put(record);
     record.currentIndex = index;
@@ -804,89 +530,77 @@ class _CollectionChangeRecord extends CollectionChangeRecord {
   }
   _collection_unlink(record) {
     this._items.remove(record);
-    var prev = record._prevRec;
-    var next = record._nextRec;
-    record._prevRec = record._nextRec = null;
+    var prev = record.prevRec;
+    var next = record.nextRec;
+    record.prevRec = record.nextRec = null;
     if (prev === null) {
-      this._collectionHead = next;
+      this.collectionHead = next;
     } else {
-      prev._nextRec = next;
+      prev.nextRec = next;
     }
     if (next === null) {
-      this._collectionTail = prev;
+      this.collectionTail = prev;
     } else {
-      next._prevRec = prev;
+      next.prevRec = prev;
     }
     return record;
   }
   _moves_add(record) {
-    if (this._movesTail === null) {
-      this._movesTail = this._movesHead = record;
+    if (this.movesTail === null) {
+      this.movesTail = this.movesHead = record;
     } else {
-      this._movesTail = this._movesTail._nextMovedRec = record;
+      this.movesTail = this.movesTail.nextMovedRec = record;
     }
     return record;
   }
   _removals_add(record) {
     record.currentIndex = null;
     this._removedItems.put(record);
-    if (this._removalsTail === null) {
-      this._removalsTail = this._removalsHead = record;
+    if (this.removalsTail === null) {
+      this.removalsTail = this.removalsHead = record;
     } else {
-      record._prevRemovedRec = this._removalsTail;
-      this._removalsTail = this._removalsTail._nextRemovedRec = record;
+      record.prevRemovedRec = this.removalsTail;
+      this.removalsTail = this.removalsTail.nextRemovedRec = record;
     }
     return record;
   }
   toString() {
     var record;
     var list = [];
-    record = this._collectionHead;
+    record = this.collectionHead;
     while (record !== null) {
       list.push(record);
-      record = record._nextRec;
+      record = record.nextRec;
     }
     var additions = [];
-    record = this._additionsHead;
+    record = this.additionsHead;
     while (record !== null) {
       additions.push(record);
-      record = record._nextAddedRec;
+      record = record.nextAddedRec;
     }
     var moves = [];
-    record = this._movesHead;
+    record = this.movesHead;
     while (record !== null) {
       moves.push(record);
-      record = record._nextMovedRec;
+      record = record.nextMovedRec;
     }
     var removals = [];
-    record = this._removalsHead;
+    record = this.removalsHead;
     while (record !== null) {
       removals.push(record);
-      record = record._nextRemovedRec;
+      record = record.nextRemovedRec;
     }
     return "collection: " + list.join(', ') + "\n" + "additions: " + additions.join(', ') + "\n" + "moves: " + moves.join(', ') + "\n" + "removals: " + removals.join(', ') + "\n";
   }
 }
-class ItemRecord extends CollectionChangeItem {
+class ItemRecord {
   constructor(item) {
     this.item = item;
     this.previousIndex = this.currentIndex = null;
-    this._prevRec = this._nextRec = null;
-    this._prevDupRec = this._nextDupRec = null;
-    this._prevRemovedRec = this._nextRemovedRec = null;
-    this._nextAddedRec = this._nextMovedRec = null;
-  }
-  get nextCollectionItem() {
-    return this._nextRec;
-  }
-  get nextRemovedItem() {
-    return this._nextRemovedRec;
-  }
-  get nextAddedItem() {
-    return this._nextAddedRec;
-  }
-  get nextMovedItem() {
-    return this._nextMovedRec;
+    this.prevRec = this.nextRec = null;
+    this.prevDupRec = this.nextDupRec = null;
+    this.prevRemovedRec = this.nextRemovedRec = null;
+    this.nextAddedRec = this.nextMovedRec = null;
   }
   toString() {
     return this.previousIndex === this.currentIndex ? `${this.item}` : `${this.item}[${this.previousIndex} -> ${this.currentIndex}]`;
@@ -901,49 +615,50 @@ class _DuplicateItemRecordList {
       this.head = this.tail = record;
     } else {
       if (beforeRecord === null) {
-        this.tail._nextDupRec = record;
-        record._prevDupRec = this.tail;
+        this.tail.nextDupRec = record;
+        record.prevDupRec = this.tail;
         this.tail = record;
       } else {
-        var prev = beforeRecord._prevDupRec;
+        var prev = beforeRecord.prevDupRec;
         var next = beforeRecord;
-        record._prevDupRec = prev;
-        record._nextDupRec = next;
+        record.prevDupRec = prev;
+        record.nextDupRec = next;
         if (prev === null) {
           this.head = record;
         } else {
-          prev._nextDupRec = record;
+          prev.nextDupRec = record;
         }
-        next._prevDupRec = record;
+        next.prevDupRec = record;
       }
     }
   }
   get(key, hideIndex) {
     var record = this.head;
-    if (typeof hideIndex !== "number")
+    if (typeof hideIndex !== "number") {
       hideIndex = null;
+    }
     while (record !== null) {
       if (hideIndex === null || hideIndex < record.currentIndex && record.item === key) {
         return record;
       }
-      record = record._nextDupRec;
+      record = record.nextDupRec;
     }
     return record;
   }
   remove(record) {
-    var prev = record._prevDupRec;
-    var next = record._nextDupRec;
+    var prev = record.prevDupRec;
+    var next = record.nextDupRec;
     if (prev === null) {
       this.head = next;
     } else {
-      prev._nextDupRec = next;
+      prev.nextDupRec = next;
     }
     if (next === null) {
       this.tail = prev;
     } else {
-      next._prevDupRec = prev;
+      next.prevDupRec = prev;
     }
-    record._prevDupRec = record._nextDupRec = null;
+    record.prevDupRec = record.nextDupRec = null;
     return this.head === null;
   }
 }
@@ -952,11 +667,13 @@ class DuplicateMap {
     this._map = new Map();
   }
   put(record, beforeRecord) {
-    if (arguments.length === 1)
+    if (arguments.length === 1) {
       beforeRecord = null;
+    }
     var list;
-    if (!(list = this._map.get(record.item)))
+    if (!(list = this._map.get(record.item))) {
       this._map.set(record.item, list = new _DuplicateItemRecordList());
+    }
     list.add(record, beforeRecord);
   }
   get(key, hideIndex) {
@@ -965,8 +682,9 @@ class DuplicateMap {
   }
   remove(record) {
     var list = this._map.get(record.item);
-    if (list.remove(record))
+    if (list.remove(record)) {
       this._map.delete(record.item);
+    }
     return record;
   }
   clear() {

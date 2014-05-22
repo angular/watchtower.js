@@ -1,6 +1,5 @@
 "use strict";
 var __moduleName = "ast";
-var WatchRecord = $traceurRuntime.assertObject(require('./change_detection')).WatchRecord;
 var $__1 = $traceurRuntime.assertObject(require('./watch_record')),
     _Handler = $__1._Handler,
     _ConstantHandler = $__1._ConstantHandler,
@@ -15,8 +14,9 @@ function _argsList(list) {
   return list.join(', ');
 }
 var AST = function AST(expression) {
-  if (typeof expression !== "string")
+  if (typeof expression !== "string") {
     throw "expression must be a string";
+  }
   this.expression = expression.indexOf('#.') === 0 ? expression.substr(2) : expression;
 };
 ($traceurRuntime.createClass)(AST, {
@@ -36,8 +36,9 @@ var $ContextReferenceAST = ContextReferenceAST;
     return new _ConstantWatchRecord(group, this.expression, group.context);
   }}, {}, AST);
 var ConstantAST = function ConstantAST(constant, expression) {
-  if (arguments.length < 2)
+  if (arguments.length < 2) {
     expression = null;
+  }
   $traceurRuntime.superCall(this, $ConstantAST.prototype, "constructor", [expression === null ? (typeof constant === "string" ? ("\"" + constant + "\"") : ("" + constant)) : expression]);
   this.constant = constant;
 };
@@ -85,6 +86,7 @@ var $CollectionAST = CollectionAST;
 var _ConstantWatchRecord = function _ConstantWatchRecord(watchGroup, expression, currentValue) {
   this.currentValue = currentValue;
   this.handler = new _ConstantHandler(watchGroup, expression, currentValue);
+  this.field = this.previousValue = this.object = this.nextChange = null;
 };
 ($traceurRuntime.createClass)(_ConstantWatchRecord, {
   check: function() {
@@ -92,23 +94,8 @@ var _ConstantWatchRecord = function _ConstantWatchRecord(watchGroup, expression,
   },
   remove: function() {
     return null;
-  },
-  get field() {
-    return null;
-  },
-  get previousValue() {
-    return null;
-  },
-  get object() {
-    return null;
-  },
-  set object(value) {
-    return null;
-  },
-  get nextChange() {
-    return null;
   }
-}, {}, WatchRecord);
+}, {});
 module.exports = {
   get AST() {
     return AST;

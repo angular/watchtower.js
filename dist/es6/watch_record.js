@@ -37,7 +37,7 @@ class _Handler {
   }
   _releaseWatch() {
     this.watchRecord.remove();
-    this.watchGrp._fieldCost--;
+    this.watchGrp.fieldCost--;
   }
   acceptValue(object) {
     return null;
@@ -160,9 +160,6 @@ export class _EvalWatchRecord {
     record.handler = handler;
     return record;
   }
-  get field() {
-    return '()';
-  }
   get object() {
     return this._object;
   }
@@ -209,12 +206,9 @@ export class _EvalWatchRecord {
     }
     return false;
   }
-  get nextChange() {
-    return null;
-  }
   remove() {
     this.mode = _MODE_DELETED_;
-    this.watchGrp._evalCost--;
+    this.watchGrp.evalCost--;
     _EvalWatchList._remove(this.watchGrp, this);
   }
   toString() {

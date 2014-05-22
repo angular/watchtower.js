@@ -45,7 +45,7 @@ define(['./linked_list', './watch'], function($__0,$__1) {
     },
     _releaseWatch: function() {
       this.watchRecord.remove();
-      this.watchGrp._fieldCost--;
+      this.watchGrp.fieldCost--;
     },
     acceptValue: function(object) {
       return null;
@@ -158,9 +158,6 @@ define(['./linked_list', './watch'], function($__0,$__1) {
   };
   var $_EvalWatchRecord = _EvalWatchRecord;
   ($traceurRuntime.createClass)(_EvalWatchRecord, {
-    get field() {
-      return '()';
-    },
     get object() {
       return this._object;
     },
@@ -207,12 +204,9 @@ define(['./linked_list', './watch'], function($__0,$__1) {
       }
       return false;
     },
-    get nextChange() {
-      return null;
-    },
     remove: function() {
       this.mode = _MODE_DELETED_;
-      this.watchGrp._evalCost--;
+      this.watchGrp.evalCost--;
       _EvalWatchList._remove(this.watchGrp, this);
     },
     toString: function() {
