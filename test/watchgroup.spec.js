@@ -313,7 +313,7 @@ describe('WatchGroup', function() {
 
     it('should react when pure function return value changes in child watchGroup', function() {
       setup();
-      var childWatchGrp = watchGrp.newGroup({'a': 1, 'b': 2});
+      var childWatchGrp = createAndAddGroup(watchGrp, {'a': 1, 'b': 2});
 
       var watch = childWatchGrp.watchExpression(new PureFunctionAST('add', function(a, b) {
         logger.log('+');
@@ -707,9 +707,9 @@ describe('WatchGroup', function() {
         proxy1 = Object.create(context);
         proxy2 = Object.create(context);
         proxy3 = Object.create(context);
-        child1a = watchGrp.newGroup(proxy1);
-        child1b = watchGrp.newGroup(proxy2);
-        child2 = child1a.newGroup(proxy3);
+        child1a = createAndAddGroup(watchGrp, proxy1);
+        child1b = createAndAddGroup(watchGrp, proxy2);
+        child2 = createAndAddGroup(child1a, proxy3);
 
         child1a.watchExpression(parse('a'), logValue('1a'));
         child1b.watchExpression(parse('a'), logValue('1b'));
@@ -727,6 +727,98 @@ describe('WatchGroup', function() {
         proxy1 = proxy2 = proxy3 = child1a = child1b = child2 = null;
       });
 
+      it('should be able to add watches without being attached to a parent', () => {
+        var changes = 0,
+            context = {a:'something'};
+
+        setup();
+        child1a = watchGrp.newGroup(context);
+        child1a.watchExpression(parse('a'), logValue('1a'));
+
+        context.a = 'another';
+        watchGrp.detectChanges(null, () => changes++);
+
+        expect(child1a.fieldCost).toBe(1);
+        expect(watchGrp.totalFieldCost).toBe(0);
+        expect(changes).toBe(0);
+        expect(`${logger}`).toBe('1a');
+      });
+
+      it('should be able to connect a group with existing watches', () => {
+        var changes = 0,
+            context = {a:'something'};
+
+        setup();
+        child1a = watchGrp.newGroup(context);
+        child1a.watchExpression(parse('a'), logValue('1a'));
+        watchGrp.addGroup(child1a);
+
+        context.a = 'another';
+        watchGrp.detectChanges(null, () => changes++);
+
+        expect(child1a.fieldCost).toBe(1);
+        expect(watchGrp.totalFieldCost).toBe(1);
+        expect(changes).toBe(1);
+        expect(`${logger}`).toBe('1a');
+      });
+
+      it('should be able to re-connect a group with existing watches', () => {
+        var changes = 0,
+            context = {a:'something'};
+
+        setup();
+        child1a = watchGrp.newGroup(context);
+        child1a.watchExpression(parse('a'), logValue('1a'));
+
+        watchGrp.addGroup(child1a);
+        child1a.remove();
+
+        context.a = 'another';
+        watchGrp.detectChanges(null, () => changes++);
+
+        expect(child1a.fieldCost).toBe(1);
+        expect(watchGrp.totalFieldCost).toBe(0);
+        expect(changes).toBe(0);
+
+        watchGrp.addGroup(child1a);
+
+        context.a = 'another2';
+        watchGrp.detectChanges(null, () => changes++);
+
+        expect(child1a.fieldCost).toBe(1);
+        expect(watchGrp.totalFieldCost).toBe(1);
+        expect(changes).toBe(1);
+      });
+
+      it('should be able to move a group with existing watches', () => {
+        var changes = 0,
+            context = {a:'something'};
+
+        setup();
+        child1a = watchGrp.newGroup(context);
+        child1a.watchExpression(parse('a'), logValue('1a'));
+
+        watchGrp.addGroup(child1a);
+        child1a.remove();
+
+        context.a = 'another';
+        watchGrp.detectChanges(null, () => changes++);
+
+        expect(child1a.fieldCost).toBe(1);
+        expect(watchGrp.totalFieldCost).toBe(0);
+        expect(changes).toBe(0);
+
+        child2 = watchGrp.newGroup({});
+        watchGrp.addGroup(child2);
+        child2.addGroup(child1a);
+
+        context.a = 'another2';
+        watchGrp.detectChanges(null, () => changes++);
+
+        expect(child1a.fieldCost).toBe(1);
+        expect(watchGrp.totalFieldCost).toBe(1);
+        expect(changes).toBe(1);
+      });
 
       it('should set field cost to expected value', function() {
         setupChildGroups();
@@ -802,7 +894,7 @@ describe('WatchGroup', function() {
       it('should not call reaction function on removed group', function() {
         setup({ 'name': 'misko' });
 
-        var child = watchGrp.newGroup(context);
+        var child = createAndAddGroup(watchGrp, context);
         watchGrp.watchExpression(parse('name'), function(v, p) {
           logger.log(`root ${v}`);
           if (v === 'destroy') {
@@ -831,7 +923,8 @@ describe('WatchGroup', function() {
         watchGrp.watchExpression(parse('a'), function(v, p) {
           logger.log(v);
         });
-        watchGrp.newGroup(childContext).watchExpression(parse('b'), logCurrentValue);
+
+        createAndAddGroup(watchGrp, childContext).watchExpression(parse('b'), logCurrentValue);
 
         watchGrp.detectChanges();
         expect(logger.toArray()).toEqual(['OK', 'OK']);
@@ -846,3 +939,10 @@ describe('WatchGroup', function() {
     });
   });
 });
+
+function createAndAddGroup(parentGroup, context){
+  var childGroup = parentGroup.newGroup(context);
+  parentGroup.addGroup(childGroup);
+  return childGroup;
+}
+
