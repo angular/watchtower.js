@@ -123,7 +123,7 @@ describe('observer', function() {
           group;
 
       setup(observer);
-      group = watchGrp.newGroup();
+      group = createAndAddGroup(watchGrp);
       group.watchField(user, 'name', null);
 
       expect(observer.closeCalls).toBe(0);
@@ -183,3 +183,10 @@ class ExplicitObserver{
     this.callback = null;
   }
 }
+
+function createAndAddGroup(parentGroup, context){
+  var childGroup = parentGroup.newGroup(context);
+  parentGroup.addGroup(childGroup);
+  return childGroup;
+}
+
