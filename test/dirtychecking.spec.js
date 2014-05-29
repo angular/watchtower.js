@@ -132,9 +132,9 @@ describe('DirtyCheckingChangeDetector', function() {
       setup();
       var obj = {};
       var ra = watchGrp.watchField(obj, 'a', '0a');
-      var child1a = watchGrp.newGroup();
-      var child1b = watchGrp.newGroup();
-      var child2 = child1a.newGroup();
+      var child1a = createAndAddGroup(watchGrp);
+      var child1b = createAndAddGroup(watchGrp);
+      var child2 = createAndAddGroup(child1a);
 
       child1a.watchField(obj, 'a', '1a');
       child1b.watchField(obj, 'a', '1b');
@@ -153,7 +153,7 @@ describe('DirtyCheckingChangeDetector', function() {
       setup();
       var obj = {};
       var ra = watchGrp.watchField(obj, 'a', 'a');
-      var child = watchGrp.newGroup();
+      var child = createAndAddGroup(watchGrp);
       var cb = child.watchField(obj, 'b', 'b');
 
       obj['a'] = obj['b'] = 1;
@@ -177,9 +177,9 @@ describe('DirtyCheckingChangeDetector', function() {
 
     it('should properly add children', function() {
       setup();
-      var a = watchGrp.newGroup();
-      var aChild = a.newGroup();
-      var b = watchGrp.newGroup();
+      var a = createAndAddGroup(watchGrp);
+      var aChild = createAndAddGroup(a);
+      var b = createAndAddGroup(watchGrp);
       expect(function() {
         watchGrp.collectChanges();
       }).not.toThrow();
@@ -579,4 +579,10 @@ class _User {
     this.last = last;
     this.age = age;
   }
+}
+
+function createAndAddGroup(parentGroup, context){
+  var childGroup = parentGroup.newGroup(context);
+  parentGroup.addGroup(childGroup);
+  return childGroup;
 }
