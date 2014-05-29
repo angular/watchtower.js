@@ -20,11 +20,11 @@ function putIfAbsent(obj, key, ctor) {
   return (obj[key] = ctor());
 }
 export class WatchGroup {
-  constructor(parentWatchGroup, getterCache, context, cache, rootGroup) {
-    this._parentWatchGroup = parentWatchGroup;
+  constructor(id, getterCache, context, cache, rootGroup) {
+    this.id = id;
     this._watchGroupHead = this._watchGroupTail = null;
     this._nextWatchGroup = this._prevWatchGroup = null;
-    this.id = `${parentWatchGroup.id}.${parentWatchGroup._nextChildId++}`;
+    this._dirtyWatchHead = this._dirtyWatchTail = null;
     this._getterCache = getterCache;
     this.context = context;
     this._cache = cache;
@@ -34,8 +34,7 @@ export class WatchGroup {
     this._marker.watchGrp = this;
     this._evalWatchHead = this._evalWatchTail = this._marker;
     this._dirtyMarker = ChangeRecord.marker();
-    this._recordTail = this._parentWatchGroup._childInclRecordTail;
-    this._recordHead = this._recordTail = this._recordAdd(this._dirtyMarker);
+    this._recordHead = this._recordTail = this._dirtyMarker;
     this.fieldCost = 0;
     this.collectionCost = 0;
     this.evalCost = 0;
@@ -113,23 +112,38 @@ export class WatchGroup {
     return this._childWatchGroupTail._recordTail;
   }
   newGroup(context) {
-    var prev = this._childWatchGroupTail._evalWatchTail;
-    var next = prev._nextEvalWatch;
     if (arguments.length === 0 || context === null) {
       context = this.context;
     }
     var root = this._rootGroup === null ? this : this._rootGroup;
+    var id = `${this.id}.${this._nextChildId++}`;
     var cache = context === null ? this._cache : {};
-    var childGroup = new WatchGroup(this, this._getterCache, context, cache, root);
-    _WatchGroupList._add(this, childGroup);
-    var marker = childGroup._marker;
-    marker._prevEvalWatch = prev;
-    marker._nextEvalWatch = next;
-    if (prev !== null)
-      prev._nextEvalWatch = marker;
-    if (next !== null)
-      next._prevEvalWatch = marker;
+    var childGroup = new WatchGroup(id, this._getterCache, context, cache, root);
     return childGroup;
+  }
+  addGroup(childGroup) {
+    childGroup.id = `${this.id}.${this._nextChildId++}`;
+    childGroup._parentWatchGroup = this;
+    var prevEval = this._childWatchGroupTail._evalWatchTail;
+    var nextEval = prevEval._nextEvalWatch;
+    var prevRecord = this._childWatchGroupTail._recordTail;
+    var nextRecord = prevRecord.nextRecord;
+    _WatchGroupList._add(this, childGroup);
+    var evalMarker = childGroup._marker;
+    evalMarker._prevEvalWatch = prevEval;
+    evalMarker._nextEvalWatch = nextEval;
+    if (prevEval !== null)
+      prevEval._nextEvalWatch = evalMarker;
+    if (nextEval !== null)
+      nextEval._prevEvalWatch = evalMarker;
+    var childRecordHead = childGroup._recordHead;
+    var childRecordTail = childGroup._recordTail;
+    childRecordHead.prevRecord = prevRecord;
+    childRecordTail.nextRecord = nextRecord;
+    if (prevRecord !== null)
+      prevRecord.nextRecord = childRecordHead;
+    if (nextRecord !== null)
+      nextRecord.prevRecord = childRecordTail;
   }
   remove() {
     var prevRecord = this._recordHead.prevRecord;
@@ -140,7 +154,6 @@ export class WatchGroup {
       nextRecord.prevRecord = prevRecord;
     this._recordHead._prevWatchGroup = null;
     this._recordTail._prevWatchGroup = null;
-    this._recordHead = this._recordTail = null;
     _WatchGroupList._remove(this._parentWatchGroup, this);
     this._nextWatchGroup = this._prevWatchGroup = null;
     this._rootGroup._removeCount++;
