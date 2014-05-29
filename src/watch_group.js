@@ -34,7 +34,7 @@ function putIfAbsent(obj, key, ctor) {
 export class WatchGroup {
   constructor(id, getterCache, context, cache, rootGroup) {
     this.id = id;
-    
+
     // Initialize _WatchGroupList
     this._watchGroupHead = this._watchGroupTail = null;
     this._nextWatchGroup = this._prevWatchGroup = null;
@@ -627,3 +627,4 @@ export class RootWatchGroup extends WatchGroup {
     return watch;
   }
 }
+
