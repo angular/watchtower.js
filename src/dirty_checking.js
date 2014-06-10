@@ -199,9 +199,7 @@ export class ChangeRecord {
   }
 
   toString() {
-    // Where the heck is hashCode from?
-    var hashCode = 0;
-    return `${_MODE_NAMES[this._mode]}[${this.field}]{${hashCode}}`;
+    return `${_MODE_NAMES[this._mode]}[${this.field}]`;
   }
 }
 
