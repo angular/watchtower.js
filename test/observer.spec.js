@@ -6,10 +6,6 @@ import {
   RootWatchGroup
 } from '../src/watch_group';
 
-import {
-  GetterCache
-} from '../src/dirty_checking';
-
 describe('observer', function() {
   var getterCache, watchGrp, setup, selector;
 
